@@ -1,4 +1,4 @@
-setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis")
+setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files")
 
 library(ade4)
 library(adegenet)
@@ -108,19 +108,19 @@ plot(sum$Hobs ~ sum$Hexp)
 # 
 # # Plotting histogram of number of samples/year
 # hist(ind_528$Year, breaks=337)
-# table(ind_568$Year)
+# table(ind_528$Year)
 
 #### Dealing with loci with multiple alleles ####
 multiallelic <- names(which(full@loc.n.all > 2))
 multiallelic <- paste(multiallelic, ".", sep = "")
 
 multiallelic_data <- full@tab[, grep(paste(multiallelic, "{3,4}", sep = "", collapse = "|"), colnames(full@tab))] # mostly works, but still includes SNP_145*
-multiallelic_data <- multiallelic_data[,-c(59:78)]
+multiallelic_data <- multiallelic_data[,-c(59:78)] # gets rid of additional SNP_145* that are actually biallelic but got picked up in the grep above
 multiallelic_counts <- colSums(multiallelic_data, na.rm = TRUE)
 
 multiallelic_names <- names(multiallelic_counts) #67
 biallelic_only <- full.dataframe[,!colnames(full.dataframe) %in% multiallelic_names] # 528x3764 (before: 3831-67 = 3764)
-  
+
 # Separate genind for adults and larvae
 adults <- rownames(biallelic_only)[205:439] #528 fish total
 larvs <- biallelic_only[!(rownames(biallelic_only) %in% adults),]
@@ -138,14 +138,13 @@ adult_data@pop <- full@pop[which(full@pop == 4)]
 
 
 ########################################################################################################
-# The rest of the script explores PCA (line 140), summary statistics (line 195), DAPC (line 203),      #
+# The rest of the script explores PCA (line 146), summary statistics (line 195), DAPC (line 203),      #
 # combining larval allele frequencies with database data (line 225) for use in AMOVA (line 272) and    #
 # larval allele frequency changes over time (line 346)                                                 #
 ########################################################################################################
 
 #### PCA ####
-# sum(is.na(full$tab)) #41594, larvs = 9554
-sum(is.na(larvs$tab)) 
+sum(is.na(larvs$tab)) #9424 
 X <- scaleGen(larvs, NA.method = "mean")
 dim(X)
 class (X)
@@ -165,11 +164,18 @@ s.class(pca1$li, pop(larvs))
 title("PCA of summer flounder dataset\naxes 1-2")
 add.scatter.eig(pca1$eig[1:20], 3,1,2)
 
-col <- azur(15)
-s.class(pca1$li, pop(larvs), xax=1,yax=2, col = transp(col,0.6), axesell=FALSE, cellipse=0, cstar=0,cpoint=3, grid=FALSE)
+col <- azur(3)
+s.class(pca1$li, pop(larvs), xax=1,yax=2, col = transp(col,0.6), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = TRUE)
 
 eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
 eig_percent [1:3]
+
+#### Closer look at the monomorphic loci in larvae ####
+biallelic_only[,2185:2186] #SNP_1111
+biallelic_only[,3405:3406] #SNP_1723
+
+biallelic_only[,c(2185,2186,3405,3406)]
+
 
 #### Break PCA down by year/period, plotting PC1 vs PC2 528 fish and 1882 alleles####
 plot(pca1$li[205:439,1], pca1$li[205:439,2], col = "blue", xlab = "PC1 (1.06%)", ylab = "PC2 (0.58%)", xlim = c(-50,10), ylim = c(-30,28)) # plots 2013-2014 adults

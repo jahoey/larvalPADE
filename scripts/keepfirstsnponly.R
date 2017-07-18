@@ -1,4 +1,4 @@
-setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis")
+setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files")
 
 data <- read.table("SNP.DP3g95maf05lm90.FIL.recode.vcf", skip = 61, sep = "\t", header = TRUE) # Need to delete the '#' in front of CHROM in order for the header to read in properly
 dim(data) #3827 x 537
