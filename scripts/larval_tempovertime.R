@@ -50,3 +50,62 @@ nc <- ordered_larvae_database_sub[ordered_larvae_database_sub$Place %in% c("Beau
 nc_tempmean <- aggregate(nc$Start.Temp, list(nc$Year), mean, na.rm = TRUE) #take mean by year
 plot(nc_tempmean, xlab = "Year", ylab = "Mean Temperature")
 
+########################################################################################
+# Reading in NC temp data from 1994-2017
+setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Larvae")
+
+library(readxl)
+
+read_excel_allsheets <- function(filename) {
+  sheets <- readxl::excel_sheets(filename)
+  x <-    lapply(sheets, function(X) readxl::read_excel(filename, sheet = X))
+  names(x) <- sheets
+  x
+}
+
+nc_data <- read_excel_allsheets("NOAA BFT Temperature Data 19940715 to 20170720.xlsx") # creates a list of dataframes
+
+# nc_df <- ldply(nc_data, data.frame)
+nc_df <- as.data.frame(rbind(nc_data$`July 15 1994 to May 2006`, nc_data$`June 2006 to present`))
+dim(nc_df) # 1947573 x 3
+
+# The date and time are in a single column. Splitting them up.
+nc_df$Date <- as.factor(format(nc_df$`DATE TIME`,"%m/%d/%Y",tz = "GMT"))
+
+# Taking daily mean and ordering by date
+nc_df_mean <- aggregate(nc_df$WATERTEMP, list(Date = nc_df[,"Date"]), mean, na.rm = TRUE) # length(unique(nc_df$Date)) = 8130
+nc_df_mean_order <- nc_df_mean[order(as.Date(nc_df_mean$Date,format="%m/%d/%Y")),]
+dim(nc_df_mean_order) # 8130 x 2
+
+# Plot daily mean over time
+nc_df_mean_order$Index <- 1:length(nc_df_mean_order$Date)
+plot(nc_df_mean_order$x ~ nc_df_mean_order$Index)
+lm_daily <- lm((nc_df_mean_order$x ~ nc_df_mean_order$Index))
+abline(lm_daily)
+
+########################################
+# Getting years in a column by themselves
+nc_df$Year <- as.factor(format(nc_df$`DATE TIME`,"%Y",tz = "GMT"))
+
+# Taking yearly mean and ordering by year
+nc_df_mean_year <- aggregate(nc_df$WATERTEMP, list(Year = nc_df[,"Year"]), mean, na.rm = TRUE) # length(unique(nc_df$Year)) = 24
+dim(nc_df_mean_year) # 24 x 2
+
+# Plot yearly mean over time
+nc_df_mean_year$Index <- 1:length(nc_df_mean_year$Year)
+plot(nc_df_mean_year$x ~ nc_df_mean_year$Year)
+lm_year <- lm((nc_df_mean_year$x ~ nc_df_mean_year$Index))
+abline(lm_year)
+
+###################################
+# Calculating temperature anomolies
+mean(nc_df_mean_year$x)
+mean(nc_df_mean$x, na.rm = TRUE)
+mean(nc_df$WATERTEMP, na.rm = TRUE)
+
+nc_df_mean_year$Anom <- mean(nc_df$WATERTEMP, na.rm = TRUE) - nc_df_mean_year$x
+
+bar <- barplot(nc_df_mean_year$Anom, ylab = 'Temperature anomoly °C', axes = FALSE, ylim = c(-10, 6))
+axis(1, at=bar, labels=nc_df_mean_year$Year)
+axis(2, at=seq(-10,6, by = 2), labels=seq(-10,6, by= 2), las = 2)
+
