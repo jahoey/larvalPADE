@@ -1,11 +1,10 @@
-setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis")
+setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files")
 
 library(ade4)
 library(adegenet)
-library(devtools)
 library("hierfstat")
 library(pegas)
-library(fields)
+
 
 # Reading in the allele frequency data for adults and larvae
 full <- read.structure("structure_input_Mar14_2017_528_1904.str",
@@ -46,7 +45,7 @@ multiallelic_names <- names(multiallelic_counts) #67
 biallelic_only <- full.dataframe[,!colnames(full.dataframe) %in% multiallelic_names] # 528x3764 (before: 3831-67 = 3764)
 
 # Turn it back into a genind
-full_bi <- as.genind(biallelic_only)
+full_bi <- as.genind(biallelic_only) # both adults and larvae
 full_bi@pop <- full@pop
 
 # Need to be able to categorize by region, so reading in larval database so that I can match larvae names to get location
@@ -94,6 +93,17 @@ place <- larvs.sub[,c("ID..", "Place")]
 ordered.place <- place[order(place[,1]),]
 dim(ordered.place) # 293 x 2
 
+#### Creating a vector of north vs south based on capture location ####
+place_only <- ordered.place[,-1]
+place_only <- gsub('Beaufort, NC', 'south', place_only)
+place_only <- gsub('North Inlet, SC', 'south', place_only)
+place_only <- gsub('Little Egg Inlet, NJ', 'north', place_only)
+place_only <- gsub('York River, VA', 'north', place_only)
+place_only <- gsub('Roosevelt Inlet, DE', 'north', place_only)
+
+# Put into genind object for a PCA
+pop(larvs.freqs2) <- place_only
+
 #### Calculate missing data on individual and allele level ####
 # How much missing data for each allele?
 result <- vector("integer", length(larvs.freqs2$tab[1,]))
@@ -119,7 +129,7 @@ larvs.freqs2@tab[c(9,94,244),1:2] # which fish are missing these alleles?
 
 #### PCA on larvae only####
 sum(is.na(larvs.freqs2$tab)) #9424; try 3: 9424/(293*3764)
-X <- scaleGen(larvs.freqs2, NA.method = "mean") # 3 alleles that aren't variable are being cut out; variance = 0 makes it hard to scale
+X <- scaleGen(larvs.freqs2, NA.method = "mean") # 4 alleles that aren't variable are being cut out; variance = 0 makes it hard to scale
 dim(X) #293 x 3760
 class (X)
 
@@ -138,13 +148,41 @@ s.class(pca1$li, pop(larvs.freqs2))
 title("PCA of summer flounder dataset\naxes 1-2")
 add.scatter.eig(pca1$eig[1:20], 3,1,2)
 
-col <- azur(15)
-s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.6), axesell=FALSE, cellipse=0, cstar=0,cpoint=3, grid=FALSE)
+col <- azur(2)
+s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.6), axesell=FALSE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE)
 
 eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
 eig_percent [1:3]
 
-# Need to match PC coordinates with the location and period so that I can plot in different colors
+### To make a nice plot of the PCA broken down by region ###
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_regionalpops.png", width=8, height=7, res=300, units="in")
+
+par(
+  mar=c(9, 8, 3, 8), # panel magin size in "line number" units
+  mgp=c(3, 1, 0), # default is c(3,1,0); line number for axis label, tick label, axis
+  tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
+  cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
+  ps=14, # point size, which is the font size
+  bg=NA
+)
+
+col <- c("#0072B2", "#D55E00")
+s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.7), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
+axis(1, at=seq(-40,20, by=10), labels=seq(-40,20, by= 10), line = 1.5)
+axis(2, at=seq(-20,20, by = 10), labels=seq(-20,20, by= 10), line = 3, las = 2)
+mtext("PC1 (0.67%)", side = 1, line = 4)
+mtext("PC2 (0.65%)", side = 2, line = 5.5)
+
+legend(-36, -8,
+       legend=c("North (n = 146)", "South (n = 147)"),
+       pch=c(19, 19),
+       col=col,
+       bty = "n",
+       y.intersp = 1)
+
+dev.off()
+
+# Need to match PC coordinates with the location and period so that I can plot in different colors/draw ellipses
 rownames(pca1$li) == ordered.place[,1] #they match
 larvalpca.place <- cbind(pca1$li, ordered.place)
 write.table(larvalpca.place, file = '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/larvalpca.place3.txt', col.names = FALSE)

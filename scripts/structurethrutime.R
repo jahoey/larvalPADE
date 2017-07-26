@@ -138,9 +138,9 @@ adult_data@pop <- full@pop[which(full@pop == 4)]
 
 
 ########################################################################################################
-# The rest of the script explores PCA (line 146), summary statistics (line 195), DAPC (line 203),      #
-# combining larval allele frequencies with database data (line 225) for use in AMOVA (line 272) and    #
-# larval allele frequency changes over time (line 346)                                                 #
+# The rest of the script explores PCA (line 146), summary statistics (line 232), DAPC (line 241),      #
+# combining larval allele frequencies with database data (line 257) for use in AMOVA (line 304) and    #
+# larval allele frequency changes over time (line 378)                                                 #
 ########################################################################################################
 
 #### PCA ####
@@ -164,8 +164,33 @@ s.class(pca1$li, pop(larvs))
 title("PCA of summer flounder dataset\naxes 1-2")
 add.scatter.eig(pca1$eig[1:20], 3,1,2)
 
+### To make a nice plot of the PCA broken down by time period ###
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_temppops.png", width=8, height=7, res=300, units="in")
+
+par(
+  mar=c(9, 8, 3, 8), # panel magin size in "line number" units
+  mgp=c(3, 1, 0), # default is c(3,1,0); line number for axis label, tick label, axis
+  tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
+  cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
+  ps=14, # point size, which is the font size
+  bg=NA
+)
+
 col <- azur(3)
-s.class(pca1$li, pop(larvs), xax=1,yax=2, col = transp(col,0.6), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = TRUE)
+s.class(pca1$li, pop(larvs), xax=1,yax=2, col = transp(col,0.7), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
+axis(1, at=seq(-40,20, by=10), labels=seq(-40,20, by= 10), line = 1.5)
+axis(2, at=seq(-20,20, by = 10), labels=seq(-20,20, by= 10), line = 3, las = 2)
+mtext("PC1 (0.67%)", side = 1, line = 4)
+mtext("PC2 (0.65%)", side = 2, line = 5.5)
+
+legend(-36, -7,
+       legend=c("1989-1993 (n = 60)", "1998-2002 (n = 87)", "2008-2012 (n = 146)"),
+       pch=c(19, 19, 19),
+       col=col,
+       bty = "n",
+       y.intersp = 1)
+
+dev.off()
 
 eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
 eig_percent [1:3]
@@ -322,15 +347,12 @@ larvs.dist <- dist(larvs.freqs)
 strata(larvs.freqs) <- data.frame(pop(full)) #Setting the strata to populations
 nameStrata(full) <- ~Population
 
+larvs_dist <- dist(larvs) #Calculates a matrix of Euclidean distances between individuals using the genetic data, missing data is ignored
+larvs_strata <- strata(larvs)
+str(larvs_dist)
 
-full_dist <- dist(full) #Calculates a matrix of Euclidean distances between individuals using the genetic data, missing data is ignored
-str(full_dist)
-strata(full) <- data.frame(pop(full)) #Setting the strata to populations
-nameStrata(full) <- ~Population
-full_stra <- strata(full)
-
-full_amova <- amova(full_dist ~ Population, data = full_stra, nperm = 0) #Just testing for population differentiation
-full_amova #Populations can only explain a small amount of variance, most of the variance is within a population --> stability of population structure
+larvs_amova_geo <- amova(larvs_dist ~ geo, data = larvs_strata, nperm = 100) #Just testing for population differentiation
+larvs_amova_geo #Populations can only explain a small amount of variance, most of the variance is within a population --> stability of population structure
 
 # Permutation test of AMOVA
 full_amova <- amova(full_dist ~ Population, data = full_stra) # 1000 permutations by default
@@ -338,11 +360,11 @@ full_amova # results are robust, populations are significantly different
 
 # Trying another implementation of AMOVA
 library("vegan")
-amova.vegan <- adonis(full_dist ~ Population, data = full_stra, permutations = 1000)
+amova.vegan <- adonis(larvs_dist ~ geo, data = larvs_strata, permutations = 1000)
 amova.vegan #Populations are different
 
 library("poppr")
-amova.poppr <- poppr.amova(full, ~Population, within = FALSE)
+amova.poppr <- poppr.amova(larvs, ~geo, within = FALSE)
 amova.poppr.test <- randtest(amova.poppr, nrepet = 1000) #tests for significance
 plot(amova.poppr.test) # variation between populations is significant, but this variation is small compared to variation within pops
 
@@ -364,7 +386,7 @@ allelefreq.larvs.mean2 <- aggregate(allelefreqs, list(pop_strata$time_period), m
 
 # Check that means make sense
 mean(allelefreqs[59:204,3]) # mean of snp3 during late period
-allelefreq.larvs.mean2[,3] # match!
+allelefreq.larvs.mean2[,4] # match!
 mean(allelefreqs[205:264,1300]) # early, snpn
 allelefreq.larvs.mean2[,1301]
 
@@ -392,6 +414,21 @@ which(late2early > 0.10)
 which(half2early > 0.13)
 which(late2half > 0.12)
 
+### To make a nice histogram of allele frequency change between earliest and latest time period ###
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/temporalchange_allelefreq.png", width=6, height=5, res=300, units="in")
+
+par(
+  mar=c(5, 4, 4, 2), # panel magin size in "line number" units
+  mgp=c(3, 1, 0), # default is c(3,1,0); line number for axis label, tick label, axis
+  tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
+  cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
+  ps=15, # point size, which is the font size
+  bg=NA
+)
+
+hist(late2early, main = NULL, xlab = "Temporal change in allele frequency")
+
+dev.off()
 #### What about mean allele frequency changes between north & south and by time period?
 # Merge the larval samping database and allele frequency dataframe
 allelefreqs$ID <- rownames(allelefreqs) # adding an ID column so the IDs are not just rownames. The names are already sorted and match the place data, so another way to do this would be to cbind.
@@ -445,6 +482,35 @@ boxplot(south.late2south.half)
 
 summary(north.late2north.early) # when NA's ignored, max freq difference is 0.365
 summary(south.late2south.early) # when NA's ignored, max freq difference is 0.294
+
+par(mfrow = c(1,2))
+lmts <- range(north.late2north.early, north.late2north.early)
+boxplot((north.late2north.early), ylim = lmts)
+boxplot(south.late2south.early, ylim = lmts)
+
+# Grouping data so that I can plot multiple boxplots on a single plot
+dat <- data.frame(cbind(north.late2north.early, south.late2south.early))
+
+## Reshape data wide -> long
+library(reshape2)
+long <- melt(dat)
+
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/temporalchange_allelefreq_byregions.png", width=4, height=5, res=300, units="in")
+
+par(
+  mar=c(5, 5, 4, 2), # panel magin size in "line number" units
+  mgp=c(3, 1, 0), # default is c(3,1,0); line number for axis label, tick label, axis
+  tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
+  cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
+  ps=15, # point size, which is the font size
+  bg=NA
+)
+plot(value ~ variable, data=long, xaxt = 'n', yaxt = 'n', xlab = NULL, ylab = NULL, col = c("#0072B2", "#D55E00"))
+axis(1, at=seq(1,2, by=1), labels=c("North", "South"))
+axis(2, at= seq(-0.4, 0.4, by=0.2), labels = seq(-0.4, 0.4, by=0.2), las = 2)
+mtext ('Temporal change in allele frequency', 2, 3.1)
+
+dev.off()
 
 # Plot loci whose allele frequencies have changed the most over time
 # Allele frequencies that have changed the most over time in the south
@@ -579,6 +645,32 @@ hist(north.early2south.early, breaks = 20)
 hist(north.half2south.half, breaks = 20)
 hist(north.late2south.late, breaks = 20) # the tails of the north/south differences are clearly smaller at the end of the time period
 
+# Grouping data so that I can plot multiple boxplots on a single plot
+regionaldiffs <- data.frame(cbind(north.early2south.early, north.half2south.half, north.late2south.late))
+
+## Reshape data wide -> long
+library(reshape2)
+library(Hmisc)
+regionaldiffs.long <- melt(regionaldiffs)
+
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/regional diffs_bytime.png", width=6, height=5, res=300, units="in")
+
+par(
+  mar=c(5, 5, 4, 2), # panel magin size in "line number" units
+  mgp=c(3, 1, 0), # default is c(3,1,0); line number for axis label, tick label, axis
+  tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
+  cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
+  ps=14, # point size, which is the font size
+  bg=NA
+)
+
+plot(value ~ variable, data=regionaldiffs.long, xaxt = 'n', yaxt = 'n', xlab = NULL, ylab = NULL, col = azur(3))
+mgp.axis(1, at=seq(1,3, by=1), labels=c("Early\n(1989-1993)", "Middle\n(1998-2002)", "Late\n(2008-2012)"), mgp=c(3, 2, 0))
+axis(2, at=seq(-0.4,0.4, by = 0.2), labels=seq(-0.4,0.4, by= 0.2), las = 2)
+mtext('Regional difference in allele frequency', side = 2, line = 3.1)
+     
+dev.off()
+
 summary(north.early2south.early)
 summary(north.half2south.half)
 summary(north.late2south.late) 
@@ -610,14 +702,13 @@ par(mfrow = c(4,5))
 for (i in early_spatial_outliers_single){
   plot(allelefreq.larvs.mean.north.t[10,], ylim=c(0,1), col = NULL, xlab = 'Time Period', ylab = 'Allele Frequency', xaxt = 'n', main = paste(rownames(allelefreq.larvs.mean.south.t)[i]))
   axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
-  lines(allelefreq.larvs.mean.north.t[i,])
-  lines(allelefreq.larvs.mean.south.t[i,], col = 'tomato')
-  # legend("bottomright",
-  #        c("North", "South"),
-  #        lty=c(1,1), 
-  #        lwd=c(2,2),col=c("black", "tomato"))
+  lines(allelefreq.larvs.mean.north.t[i,], col = '#0072b2')
+  lines(allelefreq.larvs.mean.south.t[i,], col = '#D55E00')
+  legend("bottomright",
+         c("North", "South"),
+         lty=c(1,1),
+         lwd=c(2,2),col=c("#0072b2", "#D55E00"))
 }
-
 
 lines(allelefreq.larvs.mean.north.t[127,])
 lines(allelefreq.larvs.mean.north.t[245,])
@@ -644,6 +735,28 @@ lines(allelefreq.larvs.mean.south.t[2111,], col = 'tomato')
 lines(allelefreq.larvs.mean.south.t[2359,], col = 'tomato')
 
 which(abs(south.late2south.early) > 0.15)
+
+#### Nice plot for a single locus ####
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/regionalallelefreqthrutime_sample.png", width=6, height=5, res=300, units="in")
+par(mar=c(5, 5, 4, 2),
+    mgp=c(3, 1, 0), # default is c(3,1,0); line number for axis label, tick label, axis
+    tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
+    cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
+    ps=15, # point size, which is the font size
+    bg=NA)
+plot(allelefreq.larvs.mean.north.t[10,], ylim=c(0,1), col = NULL, xlab = '', ylab = '', xaxt = 'n', yaxt = 'n', main = paste(rownames(allelefreq.larvs.mean.south.t)[79]))
+axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
+axis(2, at = seq(0,1, by = 0.2), las = 2)
+lines(allelefreq.larvs.mean.north.t[79,], col = '#0072b2')
+lines(allelefreq.larvs.mean.south.t[79,], col = '#D55E00')
+mtext('Time Period', 1, 2.7)
+mtext('Allele Frequency', 2, 3.1)
+legend("bottomright",
+       c("North", "South"),
+       lty=c(1,1),
+       lwd=c(2,2),col=c("#0072b2", "#D55E00"))
+       
+dev.off()       
 
 # Taking a look at spatial outliers from the latest time period
 par(mfrow = c(3,3))
