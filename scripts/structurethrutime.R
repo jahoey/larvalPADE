@@ -6,6 +6,7 @@ library(pegas)
 library(hierfstat)
 library(mmod)
 library(poppr)
+library(diveRsity)
 
 # Reading in SNP data file containing only the first SNP at each locus
 # full <- read.structure("structure_input_Sept7_2016.str",
@@ -129,6 +130,8 @@ adult_data <- biallelic_only[(rownames(biallelic_only) %in% adults),]
 dim(larvs) #293 x 3764
 larvs <- as.genind(larvs)
 larvs@pop <- full@pop[which(full@pop != 4)]
+larvs.sum <- summary(larvs)
+plot(larvs.sum$Hobs ~ larvs.sum$Hexp)
 adult_data <- as.genind(adult_data)
 adult_data@pop <- full@pop[which(full@pop == 4)]
 
@@ -138,7 +141,7 @@ adult_data@pop <- full@pop[which(full@pop == 4)]
 
 
 ########################################################################################################
-# The rest of the script explores PCA (line 146), summary statistics (line 232), DAPC (line 241),      #
+# The rest of the script explores PCA (line 148), summary statistics (line 238), DAPC (line 241),      #
 # combining larval allele frequencies with database data (line 257) for use in AMOVA (line 304) and    #
 # larval allele frequency changes over time (line 378)                                                 #
 ########################################################################################################
@@ -165,7 +168,7 @@ title("PCA of summer flounder dataset\naxes 1-2")
 add.scatter.eig(pca1$eig[1:20], 3,1,2)
 
 ### To make a nice plot of the PCA broken down by time period ###
-png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_temppops.png", width=8, height=7, res=300, units="in")
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_temppops_b&w.png", width=8, height=7, res=300, units="in")
 
 par(
   mar=c(9, 8, 3, 8), # panel magin size in "line number" units
@@ -173,10 +176,13 @@ par(
   tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
   cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
   ps=14, # point size, which is the font size
-  bg=NA
+  bg=NA,
+  bty = 'n'
 )
 
-col <- azur(3)
+# col <- azur(3)
+col <- greypal(4)
+col <- c("#C6C6C6", "#686868", "#000000")
 s.class(pca1$li, pop(larvs), xax=1,yax=2, col = transp(col,0.7), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
 axis(1, at=seq(-40,20, by=10), labels=seq(-40,20, by= 10), line = 1.5)
 axis(2, at=seq(-20,20, by = 10), labels=seq(-20,20, by= 10), line = 3, las = 2)
@@ -186,7 +192,8 @@ mtext("PC2 (0.65%)", side = 2, line = 5.5)
 legend(-36, -7,
        legend=c("1989-1993 (n = 60)", "1998-2002 (n = 87)", "2008-2012 (n = 146)"),
        pch=c(19, 19, 19),
-       col=col,
+       # col=col,
+       col = c("#C6C6C6", "#686868", "#000000"),
        bty = "n",
        y.intersp = 1)
 
@@ -230,13 +237,66 @@ legend("bottomleft",
 # See larvalstructure.R
 
 #### Calculate statistics ####
-stats <- diff_stats(larvs)
-hist(stats$per.locus[,1])
+stats <- diff_stats(larvs) # could potentially use Gst as a Fst estimator for each locus
+fstat(larvs, fstonly = TRUE) # calculates genome-wide Fst (Nei's 1973 Fst)
 
 pb <- as.data.frame(larvs@tab)
 jelly <- as.data.frame(as.integer(larvs@pop))
 fst <- wc(cbind(jelly, pb))
 
+# Pairwise population Fst statistics
+# Calculates Nei's pairwise Fst, apparently this overestimates compared to Bhatia et al (2013)
+pairwise.fst(larvs, pop = larvs@pop) # Nei's pairwise Fst (is this the same thing as Nei's Gst?) - this works! Do I want this or WC Fst?
+
+# Calculates Weir & Cockerham's Fst
+data("gtrunchier")
+pairwise.WCfst(gtrunchier[,-2],diploid=TRUE) # example using a test dataset
+genet.dist(gtrunchier[,-2], method = 'WC84')
+
+# Need to get the genind object into the correct format first
+loci <- names(larvs@all.names)
+
+odds <- data.frame() # odd indices
+for(i in 1:3764){
+  if (i %% 2 ==1) 
+   odds <- rbind(odds, i)
+} 
+
+evens <- data.frame() # even indices
+for(i in 1:3764){
+  if (i %% 2 ==0) 
+    evens <- rbind(evens, i)
+}
+
+larvs2 <- as.numeric(as.character(larvs@pop))
+
+j <- 1:1882
+
+larvs.loci <- data.frame(matrix(nrow = 293, ncol = 1882)) # Create empty dataframe so that alleles for an individual are in a single column
+  
+for (j in 1:length(loci)){
+      larvs.loci[,j] <- paste(pb[,odds[j,]], pb[,evens[j,]], sep="")
+} # This for loop fills in the dataframe by joining adjacent columns. This only works because all SNPs are biallelic.
+colnames(larvs.loci) <- loci # Fill in column names
+larvs2 <- cbind(larvs2,larvs.loci) # combine locus data with individual names and populations
+rownames(larvs2) <- rownames(larvs@tab) # Name individuals
+# These are allele counts. Need a way to indicate different alleles in an individual: 20  --> 11, 11 --> 12, 02 --> 22
+larvs2[larvs2 == "11"] <- 12
+larvs2[larvs2 == "20"] <- 11
+larvs2[larvs2 == "02"] <- 22
+
+larvs2[] <- lapply(larvs2, function(x) as.numeric(as.character(x)))# Convert to numeric, gives warning because replaces character 'NANA' with NA
+
+pairwise.WCfst(larvs2,diploid=TRUE)
+genet.dist(larvs2, method = 'WC84') # gives same answer as above, smaller than Nei's Fst estimates
+
+# Per locus estimates of Fst (Nei's Fst)
+bs <- basic.stats(larvs2)
+boxplot(bs$perloc$Fst)
+which(bs$perloc$Fst > 0.017)
+
+# W&C Fst is an estimator of Wright's Fst (takes sample size into account)
+fastDivPart(larvs, fst = TRUE) #input files needs to be genepop and this will take some work
 
 #### DAPC ####
 # Don't think DAPC is actually that helpful because the PCs explain so little of the variation
@@ -385,9 +445,9 @@ allelefreq.larvs.mean2 <- aggregate(allelefreqs, list(pop_strata$time_period), m
 # dim(allelefreq.larvs.mean) # 3 x 3318
 
 # Check that means make sense
-mean(allelefreqs[59:204,3]) # mean of snp3 during late period
+mean(allelefreqs[59:204,3], na.rm = T) # mean of snp3 during late period
 allelefreq.larvs.mean2[,4] # match!
-mean(allelefreqs[205:264,1300]) # early, snpn
+mean(allelefreqs[205:264,1300], na.rm = T) # early, snpn
 allelefreq.larvs.mean2[,1301]
 
 # Calculate allele frequency differences between time periods
@@ -442,18 +502,26 @@ dim(allelefreqs.larvs.north) # 146 x 3767
 allelefreqs.larvs.south <- allelefreqs_database[which(allelefreqs_database$geo == 'south'), ]
 dim(allelefreqs.larvs.south) # 147 x 3767
 
+se <- function(x) sqrt(var(x,na.rm=TRUE)/length(na.omit(x))) # Function to calculate SE
+
 drops <- c("V1", "time_period", "geo")
 allelefreq.larvs.mean.north <- allelefreqs.larvs.north[, !(colnames(allelefreqs.larvs.north) %in% drops)] # removing columns that aren't related to allele frequency
+allelefreq.larvs.se.north <- aggregate(allelefreq.larvs.mean.north, list(allelefreqs.larvs.north$time_period), se) #take se by period
 allelefreq.larvs.mean.north <- aggregate(allelefreq.larvs.mean.north, list(allelefreqs.larvs.north$time_period), mean, na.rm = TRUE) #take mean by period
 allelefreq.larvs.mean.south <- allelefreqs.larvs.south[, !(colnames(allelefreqs.larvs.south) %in% drops)] # removing columns that aren't related to allele frequency
+allelefreq.larvs.se.south <- aggregate(allelefreq.larvs.mean.south, list(allelefreqs.larvs.south$time_period), se) #take se by period
 allelefreq.larvs.mean.south <- aggregate(allelefreq.larvs.mean.south, list(allelefreqs.larvs.south$time_period), mean, na.rm = TRUE) #take mean by period
 
 # Calculate allele frequency differences between time periods & region
 allelefreq.larvs.mean.north.t <- allelefreq.larvs.mean.north[,-1] # first need to get rid of the period categories so there are fewer problems down the line (num turning to chr)
 allelefreq.larvs.mean.south.t <- allelefreq.larvs.mean.south[,-1]
+allelefreq.larvs.se.north.t <- allelefreq.larvs.se.north[,-1]
+allelefreq.larvs.se.south.t <- allelefreq.larvs.se.south[,-1]
 
 allelefreq.larvs.mean.north.t <- t(allelefreq.larvs.mean.north.t) # Transpose: columns are "early", "half" and "late"
 allelefreq.larvs.mean.south.t <- t(allelefreq.larvs.mean.south.t)
+allelefreq.larvs.se.north.t <- t(allelefreq.larvs.se.north.t)
+allelefreq.larvs.se.south.t <- t(allelefreq.larvs.se.south.t)
 
 # Difference between time periods within a region
 north.half2north.early <- allelefreq.larvs.mean.north.t[,2] - allelefreq.larvs.mean.north.t[,1]
@@ -480,7 +548,7 @@ boxplot(south.half2south.early)
 boxplot(south.late2south.early)
 boxplot(south.late2south.half)
 
-summary(north.late2north.early) # when NA's ignored, max freq difference is 0.365
+summary(north.late2north.early) # when NA's ignored, max freq difference is 0.365, slightly higher when NA's not replaced with mean
 summary(south.late2south.early) # when NA's ignored, max freq difference is 0.294
 
 par(mfrow = c(1,2))
@@ -516,7 +584,7 @@ dev.off()
 # Allele frequencies that have changed the most over time in the south
 # south_temporal_outliers <- which(abs(as.vector(south.late2south.early)) > (sd(south.late2south.early))*3) # Gives both alleles
 # south_temporal_outliers_single <- south_temporal_outliers[seq(1, length(south_temporal_outliers), 2)]
-south_temporal_outliers <- which(as.vector(south.late2south.early) > (sd(south.late2south.early))*3)
+south_temporal_outliers <- which(as.vector(south.late2south.early) > (sd(south.late2south.early, na.rm = TRUE))*3)
 
 par(mfrow = c(3,4))
 for (i in south_temporal_outliers){
@@ -524,10 +592,12 @@ for (i in south_temporal_outliers){
   axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
   lines(allelefreq.larvs.mean.north.t[i,])
   lines(allelefreq.larvs.mean.south.t[i,], col = 'tomato')
+  arrows(c(1,2,3), allelefreq.larvs.mean.north.t[i,] - allelefreq.larvs.se.north.t[i,], c(1,2,3), allelefreq.larvs.mean.north.t[i,] + allelefreq.larvs.se.north.t[i,], length = 0.05, angle = 90, code = 3)
+  arrows(c(1,2,3), allelefreq.larvs.mean.south.t[i,] - allelefreq.larvs.se.south.t[i,], c(1,2,3), allelefreq.larvs.mean.south.t[i,] + allelefreq.larvs.se.south.t[i,], length = 0.05, angle = 90, code = 3, col = 'tomato')
 }
 
 # Allele frequencies that have changed the most over time in the north
-north_temporal_outliers <- which(as.vector(north.late2north.early) > (sd(north.late2north.early))*3)
+north_temporal_outliers <- which(as.vector(north.late2north.early) > (sd(north.late2north.early, na.rm = TRUE))*3)
 
 par(mfrow = c(4,4))
 for (i in north_temporal_outliers){
@@ -535,8 +605,9 @@ for (i in north_temporal_outliers){
   axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
   lines(allelefreq.larvs.mean.north.t[i,])
   lines(allelefreq.larvs.mean.south.t[i,], col = 'tomato')
+  arrows(c(1,2,3), allelefreq.larvs.mean.north.t[i,] - allelefreq.larvs.se.north.t[i,], c(1,2,3), allelefreq.larvs.mean.north.t[i,] + allelefreq.larvs.se.north.t[i,], length = 0.05, angle = 90, code = 3)
+  arrows(c(1,2,3), allelefreq.larvs.mean.south.t[i,] - allelefreq.larvs.se.south.t[i,], c(1,2,3), allelefreq.larvs.mean.south.t[i,] + allelefreq.larvs.se.south.t[i,], length = 0.05, angle = 90, code = 3, col = 'tomato')
 }
-
 
 # which(abs(north.late2north.early) > 0.15)
 # png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/Larvae/regionalallelefreqthrutime.png", width=6, height=5, res=300, units="in")
@@ -695,19 +766,27 @@ dev.off()
 # which((sn[,3]- sn[,1]) > 0.20)
 
 ##### Plotting greatest allele frequency changes in the north for the 293 larval dataset #####
-early_spatial_outliers <- which(abs(as.vector(north.early2south.early)) > (sd(north.early2south.early)*3))
+late_spatial_outliers <- which(abs(as.vector(north.late2south.late)) > (sd(north.late2south.late, na.rm = TRUE)*3))
+late_spatial_outliers_single <- late_spatial_outliers[seq(1, length(late_spatial_outliers), 2)]
+
+half_spatial_outliers <- which(abs(as.vector(north.half2south.half)) > (sd(north.half2south.half, na.rm = TRUE)*3))
+half_spatial_outliers_single <- half_spatial_outliers[seq(1, length(half_spatial_outliers), 2)]
+
+early_spatial_outliers <- which(abs(as.vector(north.early2south.early)) > (sd(north.early2south.early, na.rm = TRUE)*3))
 early_spatial_outliers_single <- early_spatial_outliers[seq(1, length(early_spatial_outliers), 2)]
 
-par(mfrow = c(4,5))
-for (i in early_spatial_outliers_single){
+par(mfrow = c(5,4))
+for (i in late_spatial_outliers_single){
   plot(allelefreq.larvs.mean.north.t[10,], ylim=c(0,1), col = NULL, xlab = 'Time Period', ylab = 'Allele Frequency', xaxt = 'n', main = paste(rownames(allelefreq.larvs.mean.south.t)[i]))
   axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
-  lines(allelefreq.larvs.mean.north.t[i,], col = '#0072b2')
-  lines(allelefreq.larvs.mean.south.t[i,], col = '#D55E00')
-  legend("bottomright",
-         c("North", "South"),
-         lty=c(1,1),
-         lwd=c(2,2),col=c("#0072b2", "#D55E00"))
+  lines(allelefreq.larvs.mean.north.t[i,], lty = 2, col = 'gray50') # Blue = '#0072b2'
+  lines(allelefreq.larvs.mean.south.t[i,]) # Red = '#D55E00'
+  arrows(c(1,2,3), allelefreq.larvs.mean.north.t[i,] - allelefreq.larvs.se.north.t[i,], c(1,2,3), allelefreq.larvs.mean.north.t[i,] + allelefreq.larvs.se.north.t[i,], length = 0.05, angle = 90, code = 3, col = 'gray50')
+  arrows(c(1,2,3), allelefreq.larvs.mean.south.t[i,] - allelefreq.larvs.se.south.t[i,], c(1,2,3), allelefreq.larvs.mean.south.t[i,] + allelefreq.larvs.se.south.t[i,], length = 0.05, angle = 90, code = 3)
+  # legend("bottomright",
+         # c("North", "South"),
+         # lty=c(1,1),
+         # lwd=c(2,2),col=c("#0072b2", "#D55E00"))
 }
 
 lines(allelefreq.larvs.mean.north.t[127,])
@@ -807,3 +886,44 @@ lines(early_allelefreqs_mean$SNP_69.02 ~ early_allelefreqs_mean$Group.1)
 lines(middle_allelefreqs_mean$SNP_69.02 ~ middle_allelefreqs_mean$Group.1, col = "blue")
 lines(late_allelefreqs_mean$SNP_69.02 ~ late_allelefreqs_mean$Group.1, col = "tomato")
 
+#### ANCOVA or two way ANOVA on larval spatial and temporal outliers???? ####
+pop_strata$V1 == rownames(allelefreqs) # are these datasets in the same order?
+# Creating a dataframe of the data to be analyzed using ANCOVA
+# Subset allele frequency table to only outliers
+south_temporal_outliers <- which(abs(as.vector(south.late2south.early)) > (sd(south.late2south.early, na.rm = TRUE))*3)
+south_temporal_outliers # 79   80  147  148  245  246  307  308  727  728 1133 1134 1235 1236 1775 1776 2045 2046 3379 3380 3417 3418
+north_temporal_outliers <- which(abs(as.vector(north.late2north.early)) > (sd(north.late2north.early, na.rm = TRUE))*3)
+north_temporal_outliers # 137  138  319  320  547  548  563  564  911  912 1001 1002 1381 1382 1619 1620 1725 1726 1851 1852 1929 1930 2003 2004 2187 2188 2269 2270 2719 2720 2903 2904
+early_spatial_outliers #  127  128  137  138  245  246  319  320  347  348  547  548  563  564  761  762  867  868 1381 1382 1539 1540 1773 1774 1851 1852 1979 1980 2045 2046 2111 2112 2359 2360 2719 2720 2891 2892 3441 3442
+
+outlier.indices <- unique(sort(c(south_temporal_outliers, north_temporal_outliers, early_spatial_outliers)))
+outlier.indices.single <- outlier.indices[seq(1, length(outlier.indices), 2)]# take every other one
+
+outlier.df <- allelefreqs[,outlier.indices.single]
+dim(outlier.df) # 293 x 38
+outlier.df <- cbind(pop_strata[,-1], outlier.df)
+dim(outlier.df) #293 x 40
+
+snp40.01 <- lm(SNP_40.01 ~ geo + time_period + geo:time_period, data = outlier.df)
+library(car)
+options(contrasts = c("contr.sum", "contr.poly"))
+Anova(snp40.01, type = 'III')
+summary(snp40.01)
+snp64.03 <- lm(SNP_64.03 ~ time_period+geo+time_period:geo, data = outlier.df)
+Anova(snp64.03, type = 'III')
+summary(snp64.03)
+snp69.02 <- aov(SNP_69.02 ~ time_period+geo, data = outlier.df)
+
+sample1 <- outlier.df[which(outlier.df$geo == 'south' & outlier.df$time_period == 'early'),]
+
+permute <- vector()
+for (i in 1:100){
+mysample <- sample1[sample(1:nrow(sample1), 8, replace = FALSE),]
+mean <- mean(mysample$SNP_40.01)
+permute <- rbind(permute, mean)
+}
+
+hist(permute[,1])
+mean(permute[,1])
+
+mean(outlier.df[which(outlier.df$time_period =='early' & outlier.df$geo == 'south'), 'SNP_40.01'])
