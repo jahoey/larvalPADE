@@ -236,67 +236,100 @@ legend("bottomleft",
 #### PCA of larvae broken down by region ####
 # See larvalstructure.R
 
-#### Calculate statistics ####
-stats <- diff_stats(larvs) # could potentially use Gst as a Fst estimator for each locus
-fstat(larvs, fstonly = TRUE) # calculates genome-wide Fst (Nei's 1973 Fst)
+#### Calculate FST statistics ####
+# Read in a text file containing only larvae but multiallelic loci
+larvs293_multiallelic <- read.table("structure_input_Mar14_2017_293_1904_multiallelic.txt", sep="\t", header = TRUE)
 
-pb <- as.data.frame(larvs@tab)
-jelly <- as.data.frame(as.integer(larvs@pop))
-fst <- wc(cbind(jelly, pb))
+# Get rid of multiallelic loci
+# Multiallelic loci list is in multiallelic
+multiallelic <- names(which(full@loc.n.all > 2))
+larvs293_biallelic <- larvs293_multiallelic[,!(colnames(larvs293_multiallelic) %in% multiallelic)]
 
-# Pairwise population Fst statistics
-# Calculates Nei's pairwise Fst, apparently this overestimates compared to Bhatia et al (2013)
-pairwise.fst(larvs, pop = larvs@pop) # Nei's pairwise Fst (is this the same thing as Nei's Gst?) - this works! Do I want this or WC Fst?
+# Split data into odd and even row dataframes
+even_indexes<-seq(2,586,2)
+odd_indexes<-seq(1,585,2)
 
-# Calculates Weir & Cockerham's Fst
-data("gtrunchier")
-pairwise.WCfst(gtrunchier[,-2],diploid=TRUE) # example using a test dataset
-genet.dist(gtrunchier[,-2], method = 'WC84')
+odds <- data.frame(larvs293_biallelic[odd_indexes,]) # 293 x 1884
+odds2 <- odds[,-c(1:2)] # 293 x 1882
+evens <- data.frame(larvs293_biallelic[even_indexes,]) # 293 x 1884
+evens2 <- evens[,-c(1:2)] # 293 x 1882
 
-# Need to get the genind object into the correct format first
-loci <- names(larvs@all.names)
-
-odds <- data.frame() # odd indices
-for(i in 1:3764){
-  if (i %% 2 ==1) 
-   odds <- rbind(odds, i)
-} 
-
-evens <- data.frame() # even indices
-for(i in 1:3764){
-  if (i %% 2 ==0) 
-    evens <- rbind(evens, i)
+# Now paste each value in one dataframe with its corresponding in the other
+s <- 1:length(colnames(evens2))
+combo <- data.frame(matrix(nrow = 293, ncol = 1882))
+for (i in s){
+  combo[,i] <-paste(odds2[,i], evens2[,i], sep = '')
 }
 
-larvs2 <- as.numeric(as.character(larvs@pop))
+dim(combo) # 293 x 1882
 
-j <- 1:1882
+combo[] <- lapply(combo, function(x) as.numeric(as.character(x)))# Convert to numeric, gives warning because replaces character 'NANA' with NA
 
-larvs.loci <- data.frame(matrix(nrow = 293, ncol = 1882)) # Create empty dataframe so that alleles for an individual are in a single column
-  
-for (j in 1:length(loci)){
-      larvs.loci[,j] <- paste(pb[,odds[j,]], pb[,evens[j,]], sep="")
-} # This for loop fills in the dataframe by joining adjacent columns. This only works because all SNPs are biallelic.
-colnames(larvs.loci) <- loci # Fill in column names
-larvs2 <- cbind(larvs2,larvs.loci) # combine locus data with individual names and populations
-rownames(larvs2) <- rownames(larvs@tab) # Name individuals
-# These are allele counts. Need a way to indicate different alleles in an individual: 20  --> 11, 11 --> 12, 02 --> 22
-larvs2[larvs2 == "11"] <- 12
-larvs2[larvs2 == "20"] <- 11
-larvs2[larvs2 == "02"] <- 22
+pop.names <- as.numeric(as.character(evens$Pop))
 
-larvs2[] <- lapply(larvs2, function(x) as.numeric(as.character(x)))# Convert to numeric, gives warning because replaces character 'NANA' with NA
+# Combine the population numbers with the allele data
+combo2 <- cbind(pop.names, combo)
+dim(combo2) # 293 x 1883
 
-pairwise.WCfst(larvs2,diploid=TRUE)
-genet.dist(larvs2, method = 'WC84') # gives same answer as above, smaller than Nei's Fst estimates
+pairwise.WCfst(combo2,diploid=TRUE) 
+genet.dist(combo2, method = 'WC84')
 
-# Per locus estimates of Fst (Nei's Fst)
-bs <- basic.stats(larvs2)
-boxplot(bs$perloc$Fst)
-which(bs$perloc$Fst > 0.017)
 
-# W&C Fst is an estimator of Wright's Fst (takes sample size into account)
-fastDivPart(larvs, fst = TRUE) #input files needs to be genepop and this will take some work
+# #####################################################
+# 
+# # Pairwise population Fst statistics
+# # Calculates Nei's pairwise Fst, apparently this overestimates compared to Bhatia et al (2013)
+# pairwise.fst(larvs, pop = larvs@pop) # Nei's pairwise Fst (is this the same thing as Nei's Gst?) - this works! Do I want this or WC Fst?
+# 
+# # Calculates Weir & Cockerham's Fst
+# data("gtrunchier")
+# pairwise.WCfst(gtrunchier[,-2],diploid=TRUE) # example using a test dataset
+# genet.dist(gtrunchier[,-2], method = 'WC84')
+# 
+# # Need to get the genind object into the correct format first
+# loci <- names(larvs@all.names)
+# 
+# odds <- data.frame() # odd indices
+# for(i in 1:3764){
+#   if (i %% 2 ==1) 
+#    odds <- rbind(odds, i)
+# } 
+# 
+# evens <- data.frame() # even indices
+# for(i in 1:3764){
+#   if (i %% 2 ==0) 
+#     evens <- rbind(evens, i)
+# }
+# 
+# larvs2 <- as.numeric(as.character(larvs@pop))
+# 
+# j <- 1:1882
+# 
+# larvs.loci <- data.frame(matrix(nrow = 293, ncol = 1882)) # Create empty dataframe so that alleles for an individual are in a single column
+#   
+# for (j in 1:length(loci)){
+#       larvs.loci[,j] <- paste(pb[,odds[j,]], pb[,evens[j,]], sep="")
+# } # This for loop fills in the dataframe by joining adjacent columns. This only works because all SNPs are biallelic.
+# colnames(larvs.loci) <- loci # Fill in column names
+# larvs2 <- cbind(larvs2,larvs.loci) # combine locus data with individual names and populations
+# rownames(larvs2) <- rownames(larvs@tab) # Name individuals
+# # These are allele counts. Need a way to indicate different alleles in an individual: 20  --> 11, 11 --> 12, 02 --> 22
+# larvs2[larvs2 == "11"] <- 12
+# larvs2[larvs2 == "20"] <- 11
+# larvs2[larvs2 == "02"] <- 22
+# 
+# larvs2[] <- lapply(larvs2, function(x) as.numeric(as.character(x)))# Convert to numeric, gives warning because replaces character 'NANA' with NA
+# 
+# pairwise.WCfst(larvs2,diploid=TRUE)
+# genet.dist(larvs2, method = 'WC84') # gives same answer as above, smaller than Nei's Fst estimates
+# 
+# # Per locus estimates of Fst (Nei's Fst)
+# bs <- basic.stats(larvs2)
+# boxplot(bs$perloc$Fst)
+# which(bs$perloc$Fst > 0.017)
+# 
+# # W&C Fst is an estimator of Wright's Fst (takes sample size into account)
+# fastDivPart(larvs, fst = TRUE) #input files needs to be genepop and this will take some work
 
 #### DAPC ####
 # Don't think DAPC is actually that helpful because the PCs explain so little of the variation
@@ -608,6 +641,48 @@ for (i in north_temporal_outliers){
   arrows(c(1,2,3), allelefreq.larvs.mean.north.t[i,] - allelefreq.larvs.se.north.t[i,], c(1,2,3), allelefreq.larvs.mean.north.t[i,] + allelefreq.larvs.se.north.t[i,], length = 0.05, angle = 90, code = 3)
   arrows(c(1,2,3), allelefreq.larvs.mean.south.t[i,] - allelefreq.larvs.se.south.t[i,], c(1,2,3), allelefreq.larvs.mean.south.t[i,] + allelefreq.larvs.se.south.t[i,], length = 0.05, angle = 90, code = 3, col = 'tomato')
 }
+
+#### How can I summarize allele frequency plots over time for multiple loci into a single plot? ####
+# Difference between northern and southern allele frequency in latest time period/difference between northern and southern allele frequency in earliest time period on one axis
+# Northern allele frequency slope over time/southern allele frequency slope over time on other axis
+north.late2south.late 
+north.early2south.early
+
+# I need a for loop to fit a line to all northern AND all southern allele frequencies
+n <- 3764
+north.lms <- lapply(1:n, function(x) lm(allelefreq.larvs.mean.north.t[x,] ~ c(1,2,3)))
+north.coeff <- sapply(north.lms, coef) # extract coefficients
+north.slopes <- north.coeff[2,]
+
+south.lms <- lapply(1:n, function(x) lm(allelefreq.larvs.mean.south.t[x,] ~ c(1,2,3)))
+south.coeff <- sapply(south.lms, coef) # extract coefficients
+south.slopes <- south.coeff[2,]
+
+axis1 <- abs(north.slopes)-abs(south.slopes)
+# axis1 <- axis1[seq(1,length(axis1),2)] # plots just one allele per locus
+
+axis2 <- abs(north.early2south.early)-abs(north.late2south.late)
+# axis2 <- axis2[seq(1,length(axis2),2)] # plots just one allele per locus
+
+plot(axis1 ~ axis2, ylab = '|Slope in north| - |Slope in south|', xlab = '|Difference between early NvS| - |Difference between late NvS|')
+abline(h = 0, v = 0, col = 'blue')
+points(axis1[north_temporal_outliers] ~ axis2[north_temporal_outliers], col = 'red')
+points(axis1[south_temporal_outliers] ~ axis2[south_temporal_outliers], col = 'gold')
+points(axis1[early_spatial_outliers] ~ axis2[early_spatial_outliers], col = 'green')
+
+# For loop to plot all mean allele frequencies over time & linear regressions for each region
+n <- 3764
+pdf(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/allregionalallelefreqs.pdf")
+par(mfrow = c(4,5))
+for (i in 1:n){
+plot(allelefreq.larvs.mean.north.t[10,], ylim=c(0,1), col = NULL, xlab = 'Time Period', ylab = 'Allele Frequency', xaxt = 'n', main = paste(rownames(allelefreq.larvs.mean.north.t)[i]))
+axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
+points(allelefreq.larvs.mean.north.t[i,] ~ c(1,2,3), ylim = c(0,1))
+points(allelefreq.larvs.mean.south.t[i,] ~ c(1,2,3), col = 'red')
+abline(north.lms[[i]])
+abline(south.lms[[i]], col = 'red')
+}
+dev.off()
 
 # which(abs(north.late2north.early) > 0.15)
 # png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/Larvae/regionalallelefreqthrutime.png", width=6, height=5, res=300, units="in")
