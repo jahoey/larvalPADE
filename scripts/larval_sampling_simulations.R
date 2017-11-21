@@ -205,20 +205,111 @@ south.coeff <- sapply(south.lms, coef) # extract coefficients
 south.slopes[,,s] <- south.coeff[2,]
 }
 
+axis1 <- array(dim = c(1882,1,999))
 for (t in 1:length(north.sims[1,1,])){
-axis1 <- abs(north.slopes[,,t])-abs(south.slopes[,,t]) #subtract north array1 from south array1, for loop through 999 arrays; end goal (1882 x 1 x 999)
+axis1[,,t] <- abs(north.slopes[,,t])-abs(south.slopes[,,t]) #subtract north array1 from south array1, for loop through 999 arrays; end goal (1882 x 1 x 999)
 }
 
-for (u in 1:length(north.sims[1,,])){
-axis2 <- abs(northearly2southearly[,,u])-abs(northlate2southlate[,,u]) # end goal: 1882 x 1 x 999
+axis2 <- array(dim = c(1882,1,999))
+for (u in 1:length(north.sims[1,1,])){
+axis2[,,u] <- abs(northearly2southearly[,,u])-abs(northlate2southlate[,,u]) # end goal: 1882 x 1 x 999
 }
+
+# Save R objects for each axis
+save(axis1, file = "axis1.RData")
+save(axis2, file = "axis2.RData")
+
+#### Preparation for visualizing the observed and simulated axis1 and axis2 distributions ####
+# Load axis R objects
+load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis1.RData")
+load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis2.RData")
+
+# Read in observed axis1 and axis2 values
+load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis1.odds.RData")
+load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis2.odds.RData")
+
+# #### Calculate 95% percentiles for each locus ####
+# axis1.ci <- matrix(nrow = 1882, ncol = 2)
+# for (a in 1:length(axis1[,,1])){
+#   axis1.ci[a,] <- quantile(axis1[a,,], c(0.025, .975))
+# }
+# 
+# axis2.ci <- matrix(nrow = 1882, ncol = 2)
+# for (b in 1:length(axis1[,,1])){
+#   axis2.ci[b,] <- quantile(axis2[b,,], c(0.025, .975))
+# }
+
+#### Calculate 95% CI for each locus using t.test? ####
+axis1.ci <- matrix(nrow = 1882, ncol = 2)
+for (a in 1:length(axis1[,,1])){
+  t.test <- t.test(axis1[a,,], mu = mean(axis1[a,,]))
+  axis1.ci[a,1] <- t.test$conf.int[1]
+  axis1.ci[a,2] <- t.test$conf.int[2]
+}
+
+axis2.ci <- matrix(nrow = 1882, ncol = 2)
+for (b in 1:length(axis1[,,1])){
+  axis2.ci[b,] <- quantile(axis2[b,,], c(0.025, .975))
+}
+
+# Get R to tell me which observed axis1 and axis2 values are larger than observed axis1 and axis2 values & calculate proportion (p value)
+# Axis1
+axis1.pvalues <- matrix(nrow = 1882, ncol = 1) # simulated axis1 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros??
+for (b in 1:length(axis1.odds)){
+  if(axis1.odds[b] > 0){
+    axis1.pvalues[b] <- round(length(which(axis1[b,,] > axis1.odds[b]))/length(axis1[1,,]), 5)
+  } else if (axis1.odds[b] < 0){
+    axis1.pvalues[b] <- round(length(which(axis1[b,,] < axis1.odds[b]))/length(axis1[1,,]), 5)
+  } else{
+    axis1.pvalues[b] <- NA
+  }
+  # which(axis1.odds[a] < axis1.ci[a,1] | axis1.odds[a,] > axis1.ci[a,2])
+}
+
+# Adjusted p-values
+axis1.pvalues.adj <- p.adjust(axis1.pvalues, method = 'BH')
+
+# Axis2
+axis2.pvalues <- vector() # simulated axis2 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros??
+for (b in 1:length(axis2.odds)){
+  if(axis2.odds[b] > 0){
+    axis2.pvalues[b] <- round(length(which(axis2[b,,] > axis2.odds[b]))/length(axis2[1,,]), 5)
+  } else if (axis2.odds[b] < 0){
+    axis2.pvalues[b] <- round(length(which(axis2[b,,] < axis2.odds[b]))/length(axis2[1,,]), 5)
+  } else{
+    axis2.pvalues[b] <- NA
+  }
+}
+
+# Adjusted p-values
+axis2.pvalues.adj <- p.adjust(axis2.pvalues, method = 'BH')
 
 # Plot histograms (1882) for each locus made up of 999 simulations for each statistic
 # Calculate 95% confidence intervals
-# Plot observed statistic on histogram of simulated statistic
+# Plot observed statistic on histogram of simulated statistic, snp # may not match w/ index number
 
-plot(axis1 ~ axis2, ylab = '|Slope in north| - |Slope in south|', xlab = '|Difference between early NvS| - |Difference between late NvS|')
-abline(h = 0, v = 0, col = 'blue')
+# Plot axis1 histograms for each locus
+pdf("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/axis1_histograms.pdf")
+par(mfrow = c(4,4))
+for (y in 1:length(axis1[,,1])){
+  hist(axis1[y,,], main = paste(names(axis2.odds[y]), '\np-value = ', axis1.pvalues[y]), xlab = '|Slope in north| - |Slope in south|')
+  # abline(v = axis1.ci[y,1], col = 'blue')
+  # abline(v = axis1.ci[y,2], col = 'blue')
+  abline(v = axis1.odds[y], col = 'red') # observed axis1 value for each y locus
+}
+dev.off()
+
+# Plot axis2 histograms for each locus
+pdf("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/axis2_histograms.pdf")
+par(mfrow = c(4,4))
+for (y in 1:length(axis2[,,1])){
+  hist(axis2[y,,], main = paste(names(axis2.odds[y]), '\np-value = ', axis2.pvalues[y]), xlab = '|Early regional difference| - |Late regional difference|')
+  # abline(v = axis2.ci[y,1], col = 'blue')
+  # abline(v = axis2.ci[y,2], col = 'blue')
+  abline(v = axis2.odds[y], col = 'red') # observed axis2 value for each y locus
+}
+dev.off()
+
 
 
 
