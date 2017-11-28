@@ -268,6 +268,7 @@ for (b in 1:length(axis1.odds)){
 
 # Adjusted p-values
 axis1.pvalues.adj <- p.adjust(axis1.pvalues, method = 'BH')
+which(axis1.pvalues.adj < 0.05)
 
 # Axis2
 axis2.pvalues <- vector() # simulated axis2 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros??
@@ -283,6 +284,7 @@ for (b in 1:length(axis2.odds)){
 
 # Adjusted p-values
 axis2.pvalues.adj <- p.adjust(axis2.pvalues, method = 'BH')
+which(axis2.pvalues.adj < 0.05)
 
 # Plot histograms (1882) for each locus made up of 999 simulations for each statistic
 # Calculate 95% confidence intervals
@@ -310,6 +312,60 @@ for (y in 1:length(axis2[,,1])){
 }
 dev.off()
 
+###################################################################################################
+#### What if I pick one allele per locus and average them to use as my probability of success? ####
+#### But I don't think this won't tell me which loci are outliers ####
+
+north.sims <- matrix(nrow = 999, ncol = 3)
+south.sims <- matrix(nrow = 999, ncol = 3)
+n1 <- 8*2
+n2 <- 38*2
+n3 <- 100*2
+
+s1 <- 52*2
+s2 <- 49*2
+s3 <- 46*2
+
+north.sims[,1] <- rbinom(n = 999, size = n1, p = mean(odds))/n1
+north.sims[,2] <- rbinom(n = 999, size = n2, p = mean(odds))/n2
+north.sims[,3] <- rbinom(n = 999, size = n3, p = mean(odds))/n3
+south.sims[,1] <- rbinom(n = 999, size = s1, p = mean(odds))/s1
+south.sims[,2] <- rbinom(n = 999, size = s2, p = mean(odds))/s2
+south.sims[,3] <- rbinom(n = 999, size = s3, p = mean(odds))/s3
+
+# Calculate regional allele frequency differences for earliest and most recent time periods
+northearly2southearly <- vector()
+northearly2southearly <- north.sims[,1]-south.sims[,1]
+
+northlate2southlate <- vector()
+northlate2southlate <- north.sims[,3]-south.sims[,3]
+
+hist(northearly2southearly) # histrogram of differences for mean of all 1882 loci from 999 simulations
+hist(northlate2southlate) # histrogram of differences for mean of all 1882 loci from 999 simulations
+
+# I need to fit a line to all simulated northern AND all southern allele frequencies
+north.slopes <- vector() # Create empty vector to hold slope data
+south.slopes <- vector()
+
+n <- 999
+north.lms <- lapply(1:n, function(x) lm(north.sims[x,] ~ c(1,2,3)))
+north.coeff <- sapply(north.lms, coef) # extract coefficients
+north.slopes <- north.coeff[2,]
+  
+south.lms <- lapply(1:n, function(x) lm(south.sims[x,] ~ c(1,2,3)))
+south.coeff <- sapply(south.lms, coef) # extract coefficients
+south.slopes <- south.coeff[2,]
+
+axis1 <- abs(north.slopes)-abs(south.slopes) #subtract north vector from south vector; end goal (vector of length 999)
+
+axis2 <- abs(northearly2southearly)-abs(northlate2southlate) # vector of length 999
+
+# Lets plot simulated axis1 and axis2 & the observed axis1 and axis2
+par(mfrow = c(1,2))
+hist(axis1)
+abline(v = mean(axis1.odds), col = 'red')
+hist(axis2)
+abline(v = mean(axis2.odds), col = 'red')
 
 
 
