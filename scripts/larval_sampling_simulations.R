@@ -254,36 +254,56 @@ for (b in 1:length(axis1[,,1])){
 
 # Get R to tell me which observed axis1 and axis2 values are larger than observed axis1 and axis2 values & calculate proportion (p value)
 # Axis1
-axis1.pvalues <- matrix(nrow = 1882, ncol = 1) # simulated axis1 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros??
+axis1.pvalues <- matrix(nrow = 1882, ncol = 1) # simulated axis1 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros?? Because these are fixed in larvae but not in adults.
 for (b in 1:length(axis1.odds)){
   if(axis1.odds[b] > 0){
-    axis1.pvalues[b] <- round(length(which(axis1[b,,] > axis1.odds[b]))/length(axis1[1,,]), 5)
+    axis1.pvalues[b] <- round((length(which(axis1[b,,] > axis1.odds[b]))+1)/(length(axis1[1,,])+1), 5)
   } else if (axis1.odds[b] < 0){
-    axis1.pvalues[b] <- round(length(which(axis1[b,,] < axis1.odds[b]))/length(axis1[1,,]), 5)
+    axis1.pvalues[b] <- round((length(which(axis1[b,,] < axis1.odds[b]))+1)/(length(axis1[1,,])+1), 5)
   } else{
-    axis1.pvalues[b] <- NA
+    axis1.pvalues[b] <- 1
   }
-  # which(axis1.odds[a] < axis1.ci[a,1] | axis1.odds[a,] > axis1.ci[a,2])
 }
 
+# axis1.pvalues.test <- matrix(nrow = 1882, ncol = 1) # simulated axis1 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros?? Because these are fixed in larvae but not in adults.
+# for (b in 1:length(axis1.odds)){
+#   if(axis1.odds[b] > 0){
+#     axis1.pvalues.test[b] <- round(length(which(axis1[b,,] > axis1.odds[b]))/length(axis1[1,,]), 5)
+#   } else if (axis1.odds[b] < 0){
+#     axis1.pvalues.test[b] <- round(length(which(axis1[b,,] < axis1.odds[b]))/length(axis1[1,,]), 5)
+#   } else{
+#     axis1.pvalues.test[b] <- NA
+#   }
+# }
+
+# How many p-values are < 0.05? Expect 0.05 * 1882 = 94
+length(which(axis1.pvalues < 0.05)) # 191
+
 # Adjusted p-values
-axis1.pvalues.adj <- p.adjust(axis1.pvalues, method = 'BH')
+axis1.pvalues.adj <- round(p.adjust(axis1.pvalues, method = "BH", n = length(axis1.pvalues)+1), 3)
 which(axis1.pvalues.adj < 0.05)
 
+library(qvalue)
+axis1.qvalues <- qvalue(p = axis1.pvalues)
+
+
 # Axis2
-axis2.pvalues <- vector() # simulated axis2 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros??
+axis2.pvalues <- vector() # simulated axis2 values for locus SNP_1111.02 [1093] and SNP_1723.02 [1703] are all zeros?? Because these are fixed in larvae but not in adults
 for (b in 1:length(axis2.odds)){
   if(axis2.odds[b] > 0){
-    axis2.pvalues[b] <- round(length(which(axis2[b,,] > axis2.odds[b]))/length(axis2[1,,]), 5)
+    axis2.pvalues[b] <- round((length(which(axis2[b,,] > axis2.odds[b]))+1)/(length(axis2[1,,])+1), 5)
   } else if (axis2.odds[b] < 0){
-    axis2.pvalues[b] <- round(length(which(axis2[b,,] < axis2.odds[b]))/length(axis2[1,,]), 5)
+    axis2.pvalues[b] <- round((length(which(axis2[b,,] < axis2.odds[b]))+1)/(length(axis2[1,,])+1), 5)
   } else{
     axis2.pvalues[b] <- NA
   }
 }
 
+# How many p-values are < 0.05? Expect 0.05 * 1882 = 94
+length(which(axis2.pvalues < 0.05)) # 209
+
 # Adjusted p-values
-axis2.pvalues.adj <- p.adjust(axis2.pvalues, method = 'BH')
+axis2.pvalues.adj <- round(p.adjust(axis2.pvalues, method = 'BH', n = length(axis1.pvalues)+1), 3)
 which(axis2.pvalues.adj < 0.05)
 
 # Plot histograms (1882) for each locus made up of 999 simulations for each statistic
@@ -311,6 +331,10 @@ for (y in 1:length(axis2[,,1])){
   abline(v = axis2.odds[y], col = 'red') # observed axis2 value for each y locus
 }
 dev.off()
+
+# Plot axis1 vs axis2 for all (or many) simulations
+plot(axis1[,,1:100] ~ axis2[,,1:100], ylab = '|Slope in north| - |Slope in south|', xlab = '|Difference between early NvS| - |Difference between late NvS|', col = rgb(0,0,0, 0.2))
+abline(h = 0, v = 0, col = 'blue')
 
 ###################################################################################################
 #### What if I pick one allele per locus and average them to use as my probability of success? ####
@@ -366,16 +390,3 @@ hist(axis1)
 abline(v = mean(axis1.odds), col = 'red')
 hist(axis2)
 abline(v = mean(axis2.odds), col = 'red')
-
-
-
-f2samp <- rbinom(n = 1882, size = 1, p = 0.5)/(sum(f2samp)/length(f2samp))
-
-f2samp <- rbinom(n = 1900, size = 300, p = 0.5)/300
-
-f2samp <- rbinom(n = 1, size = 300, p = 0.5)/300
-
-for (i in 1:1882){
-  f2samp[i] <- rbinom(n = 1, size = 293, p = 0.5)/293
-}
-
