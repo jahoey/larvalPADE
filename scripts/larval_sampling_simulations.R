@@ -158,7 +158,7 @@ south.means[1,3] <- mean(s3samp)
 
 ##### For loop the simulations #####
 # For a high number of simulations, this should be done in a screen on Amphiprion
-load("~/odds.RData") # only for running on Amphiprion
+load("~/23_larvs/odds.RData") # only for running on Amphiprion
 north.sims <- array(dim = c(1882, 3, 100000))
 south.sims <- array(dim = c(1882, 3, 100000))
 n1 <- 8*2
@@ -208,19 +208,31 @@ south.coeff <- sapply(south.lms, coef) # extract coefficients
 south.slopes[,,s] <- south.coeff[2,]
 }
 
-axis1.2 <- array(dim = c(1882,1,100000))
+axis1.5 <- array(dim = c(1882,1,100000))
 for (t in 1:length(north.sims[1,1,])){
-axis1.2[,,t] <- abs(north.slopes[,,t])-abs(south.slopes[,,t]) #subtract north array1 from south array1, for loop through # of arrays; end goal (1882 x 1 x # of sims)
+axis1.5[,,t] <- abs(north.slopes[,,t])-abs(south.slopes[,,t]) #subtract north array1 from south array1, for loop through # of arrays; end goal (1882 x 1 x # of sims)
 }
 
-axis2.2 <- array(dim = c(1882,1,100000))
+axis2.5 <- array(dim = c(1882,1,100000))
 for (u in 1:length(north.sims[1,1,])){
-axis2.2[,,u] <- abs(northearly2southearly[,,u])-abs(northlate2southlate[,,u]) # end goal: 1882 x 1 x # of sims
+axis2.5[,,u] <- abs(northearly2southearly[,,u])-abs(northlate2southlate[,,u]) # end goal: 1882 x 1 x # of sims
 }
 
 # Save R objects for each axis
-save(axis1.2, file = "axis1.2.100000.RData")
-save(axis2.2, file = "axis2.2.100000.RData")
+# save(axis1, file = "axis1.100000.RData")
+# save(axis2, file = "axis2.100000.RData")
+
+# save(axis1.2, file = "axis1.2.100000.RData")
+# save(axis2.2, file = "axis2.2.100000.RData")
+
+# save(axis1.3, file = "axis1.3.100000.RData") # in screen -r sims1
+# save(axis2.3, file = "axis2.3.100000.RData")
+
+# save(axis1.4, file = "axis1.4.100000.RData") # in screen -r sims2
+# save(axis2.4, file = "axis2.4.100000.RData")
+
+save(axis1.5, file = "axis1.5.100000.RData") # in screen -r sims3
+save(axis2.5, file = "axis2.5.100000.RData")
 
 #### Preparation for visualizing the observed and simulated axis1 and axis2 distributions ####
 # Load axis R objects
@@ -239,6 +251,14 @@ load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_ana
 # Read in observed axis1 and axis2 values
 load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis1.odds.RData")
 load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis2.odds.RData")
+
+# On Amphiprion
+load("~/23_larvs/axis1.100000.RData")
+load("~/23_larvs/axis2.100000.RData")
+load("~/23_larvs/axis1.2.100000.RData")
+load("~/23_larvs/axis2.2.100000.RData")
+load("~/23_larvs/axis1.odds.RData")
+load("~/23_larvs/axis2.odds.RData")
 
 # #### Calculate 95% percentiles for each locus ####
 # axis1.ci <- matrix(nrow = 1882, ncol = 2)
@@ -264,9 +284,13 @@ load("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_ana
 #   axis2.ci[b,] <- quantile(axis2[b,,], c(0.025, .975))
 # }
 
-# Append multiple simulation runs together
-append(axis1, axis1.2) # should be 200,000 long
-append(axis2, axis2.2)
+# Append multiple simulation runs together, may need to happen on Amphiprion
+library(abind)
+axis1 <- abind(axis1, axis1.2) # should be array 1882 x 1 x 200,000
+axis2 <- abind(axis2, axis2.2)
+
+dim(axis1)
+dim(axis2)
 
 # Get R to tell me which observed axis1 and axis2 values are larger than observed axis1 and axis2 values & calculate proportion (p value = (r+1)/((n+1)))
 # Axis1
@@ -286,6 +310,7 @@ length(which(axis1.pvalues < 0.05)) # 191 for 1000 sims; 194 for 10,000 sims; 19
 
 # Adjusted p-values
 axis1.pvalues.adj <- round(p.adjust(axis1.pvalues, method = "BH", n = length(axis1.pvalues)+1), 3)
+axis1.pvalues.adj <- round(p.adjust(axis1.pvalues, method = "BH"), 3)
 which(axis1.pvalues.adj < 0.05)
 which(axis1.pvalues.adj < (197/1882))
 
@@ -309,6 +334,7 @@ length(which(axis2.pvalues < 0.05)) # 209 for 999 simulations; 210 for 10,000 si
 
 # Adjusted p-values
 axis2.pvalues.adj <- round(p.adjust(axis2.pvalues, method = 'BH', n = length(axis1.pvalues)+1), 3)
+axis2.pvalues.adj <- round(p.adjust(axis2.pvalues, method = 'BH'), 3)
 which(axis2.pvalues.adj < 0.05)
 which(axis2.pvalues.adj < (208/1882))
 
