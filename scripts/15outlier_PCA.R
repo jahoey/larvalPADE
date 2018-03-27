@@ -32,7 +32,7 @@ dim(adults.vcf) # 2120 x 252
 adults.outliers.vcf <- adults.vcf[adults.vcf$V1%in% adult_contigs$join,] # keep only adult outliers
 dim(adults.outliers.vcf) # 15 x 252
 
-write.table(adults.outliers.vcf[,-c(1:2)], 'structure_input_241_15outliers.vcf',row.names = FALSE, col.names = FALSE, sep = "\t") # get rid of first 2 columns so that vcf to str conversion will work
+# write.table(adults.outliers.vcf[,-c(1:2)], 'structure_input_241_15outliers.vcf',row.names = FALSE, col.names = FALSE, sep = "\t") # get rid of first 2 columns so that vcf to str conversion will work
 
 # Now use PGDspider to convert vcf to str file type
 
@@ -152,7 +152,7 @@ adult_contigs2 <- adult_contigs[which(adult_contigs$AdultBP == adult_contigs$Ful
 adult_contigs$action <- c("match", "match", "match", "retrieve from vcf", "snp not in vcf", "match", "match", "match", "match", "no such contig", "match", "match", "no such contig", "match, but 1 snp off", "no such contig")
 
 # Write the subset vcf file to disk, then use PGDspider to convert to str file
-write.table(full.sub.vcf[,-c(538)], 'structure_input_528_10outliers.vcf',row.names = FALSE, col.names = FALSE, sep = "\t") # get rid of the last column containing names so that vcf to str conversion will work
+# write.table(full.sub.vcf[,-c(538)], 'structure_input_528_10outliers.vcf',row.names = FALSE, col.names = FALSE, sep = "\t") # get rid of the last column containing names so that vcf to str conversion will work
 
 # Now use PGDspider to convert vcf to str file type
 
@@ -290,11 +290,11 @@ for (l in 1:length(south.likelihoods[,1])){
 (0.8402062^2)*(0.8578947^2)*(0.9587629^2)*(2*0.4587629*(1-0.4587629))*(0.6958763^2)*(0.890625^2)*(0.6958763^2)*(0.9639175^2)*(0.8762887^2)*(0.8842105^2)
 
 # Determine if each fish has a higher likelihood of coming from the north or the south
-regional.vector <- cbind(north.vector, south.vector)
+ratio <- north.vector/south.vector
 
 assignment <- vector()
-for (m in 1:length(regional.vector[,1])){
-  if (regional.vector[m,1] > regional.vector[m,2]){
+for (m in 1:length(ratio)){
+  if (ratio[m] > 1){
     assignment[m] <- "north"
   } else {
     assignment[m] <- "south"
@@ -303,8 +303,50 @@ for (m in 1:length(regional.vector[,1])){
 
 table(assignment)
 
-assignment.ids <- cbind(rownames(larvs.freqs.odds), assignment)
+# Modify larvae names so that I can match them to their geographic location later
+library(tidyr)
+
+fishnames.split <- as.data.frame(do.call(rbind, strsplit(as.character(rownames(larvs.freqs.odds)), 'L', fixed = TRUE)))
+fishnames.split2 <- separate(fishnames.split, V1, c("name1", "name2", "name3", "name4"),sep = c(4,5,7))
+newnames <- paste(fishnames.split2$name1, fishnames.split2$name3, fishnames.split2$name2, fishnames.split2$name4, sep = '')
+
+assignment.ids <- as.data.frame(cbind(newnames, north.vector, south.vector, assignment))
 
 #### Compare genetic assignment vs. geographic location ####
 # Read in file with larval IDs
+setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Larvae/")
+larvs <- read.csv('Larvae Sampling Database.csv', header = TRUE)
 
+larvs.merge <- merge(assignment.ids, larvs, by.x = "newnames", by.y = "ID..")
+larvs.merge <- larvs.merge[, c("newnames", "north.vector", "south.vector", "assignment", "Sampling.Date", "Month", "Date", "Year", "Place")] # get rid of some columns to make data easier to look at
+# write.table(larvs.merge, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_assignment.txt", col.names = TRUE)
+
+# Read in larval assignment
+larvs.assign <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_assignment.txt", header = TRUE)
+
+# Make "Place" eithr north or south of Hatteras: North = 1, South = 2
+larvs.assign$Place <- gsub('Little Egg Inlet, NJ', 1, larvs.assign$Place)
+larvs.assign$Place <- gsub('York River, VA', 1, larvs.assign$Place)
+larvs.assign$Place <- gsub('Roosevelt Inlet, DE', 1, larvs.assign$Place)
+larvs.assign$Place <- gsub('Chincoteague, VA', 1, larvs.assign$Place)
+larvs.assign$Place <- gsub('Beaufort, NC', 2, larvs.assign$Place)
+larvs.assign$Place <- gsub('North Inlet, SC', 2, larvs.assign$Place)
+
+# Plot log likelihood for each population
+north.log <- -log10(larvs.assign$north.vector)
+south.log <- -log10(larvs.assign$south.vector)
+geo.color <- as.numeric(larvs.assign$Place)
+
+plot(south.log ~ north.log, xlab = '-log10(north likelihood)', ylab = '-log10(south likelihood)', col=ifelse(geo.color == 1, 'blue', 'tomato')) # blue is north, red is south
+abline(a = 0,b=1)
+legend("topleft",
+       legend=c("Caught north of Hatteras", "Caught south of Hatteras"),
+       pch=c(1, 1),
+       col=c("blue", "tomato"))
+
+
+a <- c(1,2,3,4)
+b <- c(1,2,3,4)
+c <- c(1,1,2,2)
+plot(a~b, col= ifelse(c == 1, 'red', 'blue'))
+plot(south.log[290:293] ~ north.log[290:293], xlab = '-log10(north likelihood)', ylab = '-log10(south likelihood)', col=ifelse(geo.color[290:293] == 1, 'blue', 'tomato'))
