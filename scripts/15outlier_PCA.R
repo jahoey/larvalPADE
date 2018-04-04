@@ -311,8 +311,12 @@ fishnames.split2 <- separate(fishnames.split, V1, c("name1", "name2", "name3", "
 newnames <- paste(fishnames.split2$name1, fishnames.split2$name3, fishnames.split2$name2, fishnames.split2$name4, sep = '')
 
 assignment.ids <- as.data.frame(cbind(newnames, north.vector, south.vector, assignment))
+write.table(assignment.ids, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/larval_assignment.txt", col.names = TRUE)
 
 #### Compare genetic assignment vs. geographic location ####
+# Read in assignments
+ass <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/larval_assignment.txt", header = TRUE)
+
 # Read in file with larval IDs
 setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Larvae/")
 larvs <- read.csv('Larvae Sampling Database.csv', header = TRUE)
@@ -321,10 +325,10 @@ larvs.merge <- merge(assignment.ids, larvs, by.x = "newnames", by.y = "ID..")
 larvs.merge <- larvs.merge[, c("newnames", "north.vector", "south.vector", "assignment", "Sampling.Date", "Month", "Date", "Year", "Place")] # get rid of some columns to make data easier to look at
 # write.table(larvs.merge, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_assignment.txt", col.names = TRUE)
 
-# Read in larval assignment
+#### Read in larval assignment for plotting ####
 larvs.assign <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_assignment.txt", header = TRUE)
 
-# Make "Place" eithr north or south of Hatteras: North = 1, South = 2
+# Make "Place" either north or south of Hatteras: North = 1, South = 2
 larvs.assign$Place <- gsub('Little Egg Inlet, NJ', 1, larvs.assign$Place)
 larvs.assign$Place <- gsub('York River, VA', 1, larvs.assign$Place)
 larvs.assign$Place <- gsub('Roosevelt Inlet, DE', 1, larvs.assign$Place)
@@ -332,18 +336,61 @@ larvs.assign$Place <- gsub('Chincoteague, VA', 1, larvs.assign$Place)
 larvs.assign$Place <- gsub('Beaufort, NC', 2, larvs.assign$Place)
 larvs.assign$Place <- gsub('North Inlet, SC', 2, larvs.assign$Place)
 
-# Plot log likelihood for each population
-north.log <- -log10(larvs.assign$north.vector)
-south.log <- -log10(larvs.assign$south.vector)
+# Plot log likelihood for each population using all fish
+north.log <- log10(larvs.assign$north.vector)
+south.log <- log10(larvs.assign$south.vector)
 geo.color <- as.numeric(larvs.assign$Place)
 
-plot(south.log ~ north.log, xlab = '-log10(north likelihood)', ylab = '-log10(south likelihood)', col=ifelse(geo.color == 1, 'blue', 'tomato')) # blue is north, red is south
+plot(south.log ~ north.log, xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(geo.color == 1, 'blue', 'tomato')) # blue is north, red is south
 abline(a = 0,b=1)
 legend("topleft",
        legend=c("Caught north of Hatteras", "Caught south of Hatteras"),
        pch=c(1, 1),
        col=c("blue", "tomato"))
 
+# Plot log likelihood for each population broken out by time period: early (1989-1993), middle (1998-2002) & late (2008-2012)
+early <- c(1989, 1990, 1991, 1992, 1993)
+middle <- c(1998, 1999, 2000, 2001, 2002)
+late <- c(2008, 2009, 2010, 2011, 2012)
+
+early.larvs <- larvs.assign[larvs.assign$Year %in% early,]
+middle.larvs <- larvs.assign[larvs.assign$Year %in% middle,]
+late.larvs <- larvs.assign[larvs.assign$Year %in% late,]
+
+par(mfrow = c(2,2))
+plot(log10(early.larvs$south.vector) ~ log10(early.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(early.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-2), ylim = c(-6,-1)) # blue is north, red is south
+abline(a = 0,b=1)
+plot(log10(middle.larvs$south.vector) ~ log10(middle.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(middle.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-2), ylim = c(-6,-1)) # blue is north, red is south
+abline(a = 0,b=1)
+plot(log10(late.larvs$south.vector) ~ log10(late.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(late.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-2), ylim = c(-6,-1)) # blue is north, red is south
+abline(a = 0,b=1)
+
+#### PCA of larvae using gentic assignment as populations ####
+larvs2 <- as.genind(larvs.freqs)
+pop(larvs2) <- larvs.assign$Place
+
+sum(is.na(larvs2$tab)) #46
+X <- scaleGen(larvs2, NA.method = "mean")
+dim(X)
+class (X)
+
+# make PCA
+pca1 <- dudi.pca(X,cent=FALSE,scale=FALSE,scannf=FALSE,nf=3)
+barplot(pca1$eig,main="PCA eigenvalues", col=heat.colors(50))
+
+pca1
+
+# Plotting PC1 and PC2
+s.label(pca1$li)
+title("PCA of summer flounder dataset\naxes 1-2")
+add.scatter.eig(pca1$eig, 3,1,2)
+
+s.class(pca1$li, pop(larvs2))
+title("PCA of summer flounder dataset\naxes 1-2")
+add.scatter.eig(pca1$eig, 3,1,2)
+
+eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
+eig_percent [1:3]
 
 a <- c(1,2,3,4)
 b <- c(1,2,3,4)
