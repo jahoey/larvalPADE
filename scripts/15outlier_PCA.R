@@ -182,6 +182,7 @@ adults <- rownames(full.freqs)[205:439] #528 fish total
 
 larvs.freqs <- full.freqs[!(rownames(full.freqs) %in% adults),]
 dim(larvs.freqs) #293 x 20
+write.table(larvs.freqs, '293larvs_10loci.txt')
 
 # Subset adult spatial outliers to those only occuring in larvae
 regional.outs.freqs
@@ -348,6 +349,37 @@ legend("topleft",
        pch=c(1, 1),
        col=c("blue", "tomato"))
 
+# Plot log likelihood for all fish & denote shape by season
+table(larvs.assign$Month)
+fall <- c(10,11,12)
+winter <- c(1,2,3,4,6)
+
+fall.larvs <- larvs.assign[larvs.assign$Month %in% fall,]
+winter.larvs <- larvs.assign[larvs.assign$Month %in% winter,]
+
+pdf('~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_assignmentbyseason.pdf', width = 11, height = 6)
+par(mfrow = c(1,2),
+    cex = 1)
+plot(log10(fall.larvs$south.vector) ~ log10(fall.larvs$north.vector), main = 'Fall', xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(fall.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-1), ylim = c(-6.5,-1.5)) # blue is north, red is south
+abline(a = 0,b=1)
+legend("bottom right",
+       legend=c("Caught N of Hatteras"),
+       pch=c(1),
+       col=c("blue"))
+plot(log10(winter.larvs$south.vector) ~ log10(winter.larvs$north.vector), pch = 2, main = 'Winter', xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(winter.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-1), ylim = c(-6.5,-1.5)) # blue is north, red is south
+abline(a = 0,b=1)
+legend("bottomright",
+       legend=c("Caught N of Hatteras", "Caught S of Hatteras"),
+       pch=c(2, 2),
+       col=c("blue", "tomato"))
+
+dev.off()
+
+# legend("bottomright",
+#        legend=c("Caught north of Hatteras/Fall", "Caught south of Hatteras/Fall", "Caught north of Hatteras/Winter", "Caught south of Hatteras/Winter"),
+#        pch=c(1, 1, 2, 2),
+#        col=c("blue", "tomato", "blue", "tomato"))
+
 # Plot log likelihood for each population broken out by time period: early (1989-1993), middle (1998-2002) & late (2008-2012)
 early <- c(1989, 1990, 1991, 1992, 1993)
 middle <- c(1998, 1999, 2000, 2001, 2002)
@@ -358,11 +390,11 @@ middle.larvs <- larvs.assign[larvs.assign$Year %in% middle,]
 late.larvs <- larvs.assign[larvs.assign$Year %in% late,]
 
 par(mfrow = c(2,2))
-plot(log10(early.larvs$south.vector) ~ log10(early.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(early.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-2), ylim = c(-6,-1)) # blue is north, red is south
+plot(log10(early.larvs$south.vector) ~ log10(early.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(early.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-1), ylim = c(-6,-1)) # blue is north, red is south
 abline(a = 0,b=1)
-plot(log10(middle.larvs$south.vector) ~ log10(middle.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(middle.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-2), ylim = c(-6,-1)) # blue is north, red is south
+plot(log10(middle.larvs$south.vector) ~ log10(middle.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(middle.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-1), ylim = c(-6,-1)) # blue is north, red is south
 abline(a = 0,b=1)
-plot(log10(late.larvs$south.vector) ~ log10(late.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(late.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-2), ylim = c(-6,-1)) # blue is north, red is south
+plot(log10(late.larvs$south.vector) ~ log10(late.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(late.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-1), ylim = c(-6,-1)) # blue is north, red is south
 abline(a = 0,b=1)
 
 #### PCA of larvae using gentic assignment as populations ####
