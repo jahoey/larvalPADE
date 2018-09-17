@@ -72,6 +72,8 @@ regions <- gsub('3', 'north', regions)
 regions <- gsub('4', 'south', regions)
 regions <- gsub('5', 'south', regions)
 
+write.table(cbind(merge1, regions), '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.counts15.txt')
+
 #### Calculate allele frequencies ####
 outs.freqs <- colSums(as.data.frame(outs@tab), na.rm = TRUE)/(2*colSums(!is.na(outs@tab))) # for all loci
 
@@ -187,6 +189,7 @@ write.table(larvs.freqs, '293larvs_10loci.txt')
 # Subset adult spatial outliers to those only occuring in larvae
 regional.outs.freqs
 regional.outs.freqs10 <- regional.outs.freqs[,colnames(larvs.freqs)] # 2 x 20
+write.table(regional.outs.freqs10, '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/regional.adult.outs.freqs10.txt')
 colnames(regional.outs.freqs10) == colnames(larvs.freqs) # column names are in the same order
 rbind(colnames(regional.outs.freqs10), colnames(larvs.freqs))
 
