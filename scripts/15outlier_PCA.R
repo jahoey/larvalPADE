@@ -325,7 +325,7 @@ ass <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/
 setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Larvae/")
 larvs <- read.csv('Larvae Sampling Database.csv', header = TRUE)
 
-larvs.merge <- merge(assignment.ids, larvs, by.x = "newnames", by.y = "ID..")
+larvs.merge <- merge(ass, larvs, by.x = "newnames", by.y = "ID..")
 larvs.merge <- larvs.merge[, c("newnames", "north.vector", "south.vector", "assignment", "Sampling.Date", "Month", "Date", "Year", "Place")] # get rid of some columns to make data easier to look at
 # write.table(larvs.merge, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_assignment.txt", col.names = TRUE)
 
@@ -399,6 +399,46 @@ plot(log10(middle.larvs$south.vector) ~ log10(middle.larvs$north.vector), xlab =
 abline(a = 0,b=1)
 plot(log10(late.larvs$south.vector) ~ log10(late.larvs$north.vector), xlab = 'log likelihood (north)', ylab = 'log likelihood (south)', col=ifelse(as.numeric(late.larvs$Place) == 1, 'blue', 'tomato'), xlim = c(-6,-1), ylim = c(-6,-1)) # blue is north, red is south
 abline(a = 0,b=1)
+
+#### Assignment based on region & season ####
+# Requires 'larvs.assign': dataframe of larvae names, likelihood of coming from northern parents, likelihood of coming from southern parents, region/ingress site and ingress season
+
+# Make "Month" either fall or winter
+larvs.assign$Month <- gsub(10, "fall", larvs.assign$Month)
+larvs.assign$Month <- gsub(11, "fall", larvs.assign$Month)
+larvs.assign$Month <- gsub(12, "fall", larvs.assign$Month)
+larvs.assign$Month <- gsub(1, "winter", larvs.assign$Month)
+larvs.assign$Month <- gsub(2, "winter", larvs.assign$Month)
+larvs.assign$Month <- gsub(3, "winter", larvs.assign$Month)
+larvs.assign$Month <- gsub(4, "winter", larvs.assign$Month)
+larvs.assign$Month <- gsub(6, "winter", larvs.assign$Month)
+
+table(larvs.assign$Month, larvs.assign$Place)
+
+cbind(rownames(larvs.freqs.odds), as.character(larvs.assign$newnames)) # check out order that individual likelihoods and associated region/season data are in; should be the same
+
+north.pop <- aggregate(north.vector, by = list(larvs.assign$Month, larvs.assign$Place), FUN = prod) # northern likelihoods for region/season combo; south/winter = 0
+south.pop <- aggregate(south.vector, by = list(larvs.assign$Month, larvs.assign$Place), FUN = prod) # southern likelihoods for region/season combo
+
+pops.likelihood <- as.data.frame(cbind(log10(as.numeric(north.pop[,3])), log10(as.numeric(south.pop[,3]))))
+colnames(pops.likelihood) <- c("n.likes", "s.likes")
+rownames(pops.likelihood) <- c("fall.north", "winter.north", "winter.south")
+
+# Plot likelihoods for region/season combos
+library(wesanderson)
+col.palette <- wes_palette("Darjeeling1", 5, type = "discrete")
+palette(col.palette)
+plot(pops.likelihood[,'s.likes'] ~ pops.likelihood[,'n.likes'], ylab = 'Southern likelihood', xlab = 'Northern likelihood', col = as.factor(rownames(pops.likelihood)), pch = 19)
+abline(a=0,b=1)
+legend("bottomright",
+       legend=c("Fall & North", "Winter & North", "Winter & South"),
+       pch=c(19, 19, 19),
+       col=as.factor(rownames(pops.likelihood)))
+
+write.table(cbind(larvs.assign$north.vector[which(larvs.assign$Place == '2' & larvs.assign$Month == 'winter')], larvs.assign$south.vector[which(larvs.assign$Place == '2' & larvs.assign$Month == 'winter')]), file = '~/Desktop/product.txt', sep = '\t', row.names = FALSE)
+
+
+
 
 #### PCA of larvae using gentic assignment as populations ####
 larvs2 <- as.genind(larvs.freqs)
