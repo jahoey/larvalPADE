@@ -417,10 +417,19 @@ table(larvs.assign$Month, larvs.assign$Place)
 
 cbind(rownames(larvs.freqs.odds), as.character(larvs.assign$newnames)) # check out order that individual likelihoods and associated region/season data are in; should be the same
 
-north.pop <- aggregate(north.vector, by = list(larvs.assign$Month, larvs.assign$Place), FUN = prod) # northern likelihoods for region/season combo; south/winter = 0
-south.pop <- aggregate(south.vector, by = list(larvs.assign$Month, larvs.assign$Place), FUN = prod) # southern likelihoods for region/season combo
+north.pop <- aggregate(larvs.assign$north.vector, by = list(larvs.assign$Month, larvs.assign$Place), FUN = prod) # northern likelihoods for region/season combo; south/winter = 0
+south.pop <- aggregate(larvs.assign$south.vector, by = list(larvs.assign$Month, larvs.assign$Place), FUN = prod) # southern likelihoods for region/season combo
 
-pops.likelihood <- as.data.frame(cbind(log10(as.numeric(north.pop[,3])), log10(as.numeric(south.pop[,3]))))
+# Remember log10(M*N) = log10(M) + log10(N)
+larvs.assign$north.vector.log <- log10(larvs.assign$north.vector)
+larvs.assign$south.vector.log <- log10(larvs.assign$south.vector)
+
+north.pop.log <- aggregate(larvs.assign$north.vector.log, by = list(larvs.assign$Month, larvs.assign$Place), FUN = sum) # northern likelihoods for region/season combo; same as above, but south/winter =/= 0!!
+south.pop.log <- aggregate(larvs.assign$south.vector.log, by = list(larvs.assign$Month, larvs.assign$Place), FUN = sum) 
+
+
+# pops.likelihood <- as.data.frame(cbind(log10(as.numeric(north.pop[,3])), log10(as.numeric(south.pop[,3])))) # for when log10(M*N) and the log step hasn't been done yet
+pops.likelihood <- as.data.frame(cbind(north.pop.log[,3], south.pop.log[,3])) # instead log10(M) + log10(N) [already logged]
 colnames(pops.likelihood) <- c("n.likes", "s.likes")
 rownames(pops.likelihood) <- c("fall.north", "winter.north", "winter.south")
 
@@ -428,15 +437,16 @@ rownames(pops.likelihood) <- c("fall.north", "winter.north", "winter.south")
 library(wesanderson)
 col.palette <- wes_palette("Darjeeling1", 5, type = "discrete")
 palette(col.palette)
-plot(pops.likelihood[,'s.likes'] ~ pops.likelihood[,'n.likes'], ylab = 'Southern likelihood', xlab = 'Northern likelihood', col = as.factor(rownames(pops.likelihood)), pch = 19)
+plot(pops.likelihood[,'s.likes'] ~ pops.likelihood[,'n.likes'], ylab = 'Southern log likelihood', xlab = 'Northern log likelihood', col = as.factor(rownames(pops.likelihood)), pch = 19)
 abline(a=0,b=1)
 legend("bottomright",
        legend=c("Fall & North", "Winter & North", "Winter & South"),
        pch=c(19, 19, 19),
        col=as.factor(rownames(pops.likelihood)))
 
-write.table(cbind(larvs.assign$north.vector[which(larvs.assign$Place == '2' & larvs.assign$Month == 'winter')], larvs.assign$south.vector[which(larvs.assign$Place == '2' & larvs.assign$Month == 'winter')]), file = '~/Desktop/product.txt', sep = '\t', row.names = FALSE)
-
+# Plot CIs
+library(plotrix)
+plotCI(pops.likelihood$n.likes, pops.likelihood$s.likes)
 
 
 
