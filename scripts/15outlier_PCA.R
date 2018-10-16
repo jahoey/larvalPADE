@@ -193,6 +193,24 @@ write.table(regional.outs.freqs10, '~/Documents/Graduate School/Rutgers/Summer F
 colnames(regional.outs.freqs10) == colnames(larvs.freqs) # column names are in the same order
 rbind(colnames(regional.outs.freqs10), colnames(larvs.freqs))
 
+# Subset adult allele counts to those loci only occuring in larvae
+adult15_counts <- read.table('~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.counts15.txt')
+
+adult10_counts <- adult15_counts[,colnames(adult15_counts) %in% colnames(full.freqs)] # subset adult 15 outliers to the 10 in larvae
+adult10_counts2 <- cbind(adult15_counts$PinskyID, adult15_counts$regions, adult10_counts) # add pack ID and region
+colnames(adult10_counts2)[1:2] <- c('PinskyID', 'regions')
+
+dim(adult10_counts2[which(adult10_counts2$regions == 'north'), ])
+dim(adult10_counts2[which(adult10_counts2$regions == 'south'), ])
+
+adult10_counts2_north <- adult10_counts2[which(adult10_counts2$regions == 'north'), -c(1:2)]
+adult10_counts2_south <- adult10_counts2[which(adult10_counts2$regions == 'south'), -c(1:2)]
+
+colSums(adult10_counts2_north, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_north)))
+colSums(adult10_counts2_south, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_south)))
+
+write.table(adult10_counts2, '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.counts10.txt', col.names = TRUE)
+
 #### Allele frequency loci names between larvae & adults match ####
 # First, let's look at histograms of allele frequencies. I'm guessing they should look approximately similar
 dim(PADE232_15loci[,-31]) # minus names column: 232 x 30
