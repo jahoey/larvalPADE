@@ -155,7 +155,7 @@ eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
 eig_percent [1:3]
 
 ### To make a nice plot of the PCA broken down by region ###
-png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_regionalpops.png", width=8, height=7, res=300, units="in")
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_regionalpops_b&w.png", width=8, height=7, res=300, units="in")
 
 par(
   mar=c(9, 8, 3, 8), # panel magin size in "line number" units
@@ -163,11 +163,13 @@ par(
   tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
   cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
   ps=14, # point size, which is the font size
-  bg=NA
+  bg=NA,
+  bty = 'n'
 )
 
-col <- c("#0072B2", "#D55E00")
-s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.7), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
+# col <- c("#0072B2", "#D55E00")
+col <- c("#969696", "#000000")
+s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.7), pch = 1, axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
 axis(1, at=seq(-40,20, by=10), labels=seq(-40,20, by= 10), line = 1.5)
 axis(2, at=seq(-20,20, by = 10), labels=seq(-20,20, by= 10), line = 3, las = 2)
 mtext("PC1 (0.67%)", side = 1, line = 4)
@@ -175,10 +177,15 @@ mtext("PC2 (0.65%)", side = 2, line = 5.5)
 
 legend(-36, -8,
        legend=c("North (n = 146)", "South (n = 147)"),
-       pch=c(19, 19),
+       pch=c(1, 1),
        col=col,
        bty = "n",
        y.intersp = 1)
+
+legend(-40.7,21,
+       legend = expression("A"),
+       bty = "n",
+       cex = 1.3)
 
 dev.off()
 
@@ -224,7 +231,47 @@ legend("bottomleft",
 dev.off()
 
 #### What about a PCA using only spatially divergent alleles?
+# Read in dataset containing outlier loci
+gen.larvae.outs <- read.table('~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/masterPADElarvae.txt', header = TRUE, sep = "\t")
 
+# Keep only larvae with genetic assignments
+gen.larvae.outs2 <- gen.larvae.outs[which(is.na(gen.larvae.outs$assignment) == FALSE), ]
 
+library(adegenet)
+library(wesanderson)
 
-#####
+gen.larvae.outs3 <- as.genind(gen.larvae.outs2[,16:35])
+
+# PCA
+sum(is.na(gen.larvae.outs3$tab)) #46
+X <- scaleGen(gen.larvae.outs3, NA.method = "mean")
+dim(X)
+class (X)
+
+col.palette <- wes_palette("Darjeeling1", 5, type = "discrete")
+palette(col.palette)
+loc.cols <- col.palette[as.numeric(factor(gen.larvae.outs2$Place))]
+
+# make PCA
+pca1 <- dudi.pca(X,cent=FALSE,scale=FALSE,scannf=FALSE,nf=3)
+barplot(pca1$eig,main="PCA eigenvalues", col=heat.colors(50))
+
+pca1
+
+# Plotting PC1 and PC2
+eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
+eig_percent [1:3]
+
+col <- col.palette
+s.class(pca1$li, factor(gen.larvae.outs2$Place), xax=1,yax=2, col = transp(col,0.9), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, clabel = 0, xlim = c(-11,5), ylim = c(-9,6))
+axis(1, at=seq(-8,4, by=1), labels=seq(-8,4, by= 1), line = -2)
+axis(2, at=seq(-6,6, by = 1), labels=seq(-6,6, by= 1), line = 1, las = 2)
+mtext("PC1 (12.7%)", side = 1, line = 0.5)
+mtext("PC2 (12.3%)", side = 2, line = 3)
+title("PCA of larval summer flounder \nusing adult outliers")
+
+legend(-9, 6,
+       legend=levels(factor(gen.larvae.outs2$Place)),
+       pch=19,
+       col=col,
+       bty = "n")
