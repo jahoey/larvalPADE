@@ -179,6 +179,65 @@ for (i in 1:length(full.sub.vcf$names)){
 
 colnames(full.freqs) <- paste(full.contig.vector, outs.full.locusnames.split[,2], sep = '.')
 
+# Read in data for all available larvae so that I can get years and locations for a more informative STRUCTURE file
+setwd("/Users/jenniferhoey/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/")
+data <- read.table('masterPADElarvae.txt', header = TRUE)
+
+data2 <- data[,c('PinskyID', 'Year', 'Place')]
+
+# Fix fish names in the metadata
+library(tidyr)
+
+fishnames.split <- as.data.frame(do.call(rbind, strsplit(as.character(data2$PinskyID), '_', fixed = TRUE)))
+fishnames.split2 <- separate(fishnames.split, V1, c("name1", "name2"),sep = c(4))
+data2$PinskyID <- as.factor(paste(fishnames.split2$name1, '_', fishnames.split2$name2, fishnames.split2$V2, sep = ''))
+
+# Replace Year by time period
+data2$Year <- gsub("1989", "early", data2$Year) # Assign time periods to years
+data2$Year <- gsub("1990", "early", data2$Year)
+data2$Year <- gsub("1991", "early", data2$Year)
+data2$Year <- gsub("1992", "early", data2$Year)
+data2$Year <- gsub("1993", "early", data2$Year)
+data2$Year <- gsub("1998", "middle", data2$Year)
+data2$Year <- gsub("1999", "middle", data2$Year)
+data2$Year <- gsub("2000", "middle", data2$Year)
+data2$Year <- gsub("2001", "middle", data2$Year)
+data2$Year <- gsub("2002", "middle", data2$Year)
+data2$Year <- gsub("2008", "late", data2$Year)
+data2$Year <- gsub("2009", "late", data2$Year)
+data2$Year <- gsub("2010", "late", data2$Year)
+data2$Year <- gsub("2011", "late", data2$Year)
+data2$Year <- gsub("2012", "late", data2$Year)
+
+# Fix fish names in the genetic data
+names.genetic <- as.data.frame(do.call(rbind, strsplit(as.character(rownames(full.freqs)), 'L', fixed = TRUE)))
+
+# Subset metadata to only those larvae with genetic data
+pops <- data2[data2$PinskyID %in% names.genetic$V1,] # limit larval metadata to only larvae those with genetic data: 293 x 3
+
+# Merge genetic data of adults and larvae with the larval metadata while keeping all adults
+pops2 <- merge(names.genetic, pops, by.x = "V1", by.y = "PinskyID", all.x = TRUE) # 528 x 5
+
+table(pops2$Year, pops2$Place)
+
+pops2$pop <- NA
+pops2$pop[pops2$Year == 'early' & pops2$Place == 'Little Egg Inlet, NJ'] <- 1
+pops2$pop[pops2$Year == 'middle' & pops2$Place == 'Little Egg Inlet, NJ'] <- 2
+pops2$pop[pops2$Year == 'late' & pops2$Place == 'Little Egg Inlet, NJ'] <- 3
+pops2$pop[pops2$Year == 'early' & pops2$Place == 'Beaufort, NC'] <- 4
+pops2$pop[pops2$Year == 'middle' & pops2$Place == 'Beaufort, NC'] <- 5
+pops2$pop[pops2$Year == 'late' & pops2$Place == 'Beaufort, NC'] <- 6
+pops2$pop[pops2$Year == 'late' & pops2$Place == 'Roosevelt Inlet, DE'] <- 7
+pops2$pop[pops2$Year == 'late' & pops2$Place == 'York River, VA'] <- 8
+pops2$pop[pops2$Year == 'late' & pops2$Place == 'North Inlet, SC'] <- 9
+
+table(pops2$pop)
+
+
+pops3 <- cbind(as.character(rep(pops2$V1, eac = 2)), rep(pops2$pop))
+# Check this against .str file
+
+
 # Remove adults
 adults <- rownames(full.freqs)[205:439] #528 fish total
 
