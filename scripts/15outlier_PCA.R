@@ -230,12 +230,12 @@ pops2$pop[pops2$Year == 'late' & pops2$Place == 'Beaufort, NC'] <- 6
 pops2$pop[pops2$Year == 'late' & pops2$Place == 'Roosevelt Inlet, DE'] <- 7
 pops2$pop[pops2$Year == 'late' & pops2$Place == 'York River, VA'] <- 8
 pops2$pop[pops2$Year == 'late' & pops2$Place == 'North Inlet, SC'] <- 9
+pops2$pop[is.na(pops2$pop)] <- 10
 
 table(pops2$pop)
 
-
-pops3 <- cbind(as.character(rep(pops2$V1, eac = 2)), rep(pops2$pop))
-# Check this against .str file
+pops3 <- cbind(as.character(rep(pops2$V1, eac = 2)), rep(pops2$pop, eac = 2))
+write.table(pops3, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_528_10outliers_pops.txt", sep = '\t', col.names = FALSE, row.names = FALSE)
 
 
 # Remove adults
