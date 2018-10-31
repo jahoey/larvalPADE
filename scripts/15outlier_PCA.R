@@ -255,6 +255,7 @@ rbind(colnames(regional.outs.freqs10), colnames(larvs.freqs))
 # Subset adult allele counts to those loci only occuring in larvae
 adult15_counts <- read.table('~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.counts15.txt')
 
+# Two groupings: Grouping by north and south AND by BayEnv populations
 adult10_counts <- adult15_counts[,colnames(adult15_counts) %in% colnames(full.freqs)] # subset adult 15 outliers to the 10 in larvae
 adult10_counts2 <- cbind(adult15_counts$PinskyID, adult15_counts$regions, adult10_counts) # add pack ID and region
 colnames(adult10_counts2)[1:2] <- c('PinskyID', 'regions')
@@ -269,6 +270,42 @@ colSums(adult10_counts2_north, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_n
 colSums(adult10_counts2_south, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_south)))
 
 write.table(adult10_counts2, '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.counts10.txt', col.names = TRUE)
+
+# Grouping by BayEnv populations
+adult10_counts <- adult15_counts[,colnames(adult15_counts) %in% colnames(full.freqs)] # subset adult 15 outliers to the 10 in larvae
+adult10_counts2 <- cbind(adult15_counts$PinskyID, adult15_counts$bayenv_pop, adult10_counts) # add pack ID and bayenv populations
+colnames(adult10_counts2)[1:2] <- c('PinskyID', 'bayenv_pop')
+
+dim(adult10_counts2[which(adult10_counts2$bayenv_pop == 1), ])
+dim(adult10_counts2[which(adult10_counts2$bayenv_pop == 2), ])
+dim(adult10_counts2[which(adult10_counts2$bayenv_pop == 3), ])
+dim(adult10_counts2[which(adult10_counts2$bayenv_pop == 4), ])
+dim(adult10_counts2[which(adult10_counts2$bayenv_pop == 5), ])
+
+adult10_counts2_pop1 <- adult10_counts2[which(adult10_counts2$bayenv_pop == 1), -c(1:2)]
+adult10_counts2_pop2 <- adult10_counts2[which(adult10_counts2$bayenv_pop == 2), -c(1:2)]
+adult10_counts2_pop3 <- adult10_counts2[which(adult10_counts2$bayenv_pop == 3), -c(1:2)]
+adult10_counts2_pop4 <- adult10_counts2[which(adult10_counts2$bayenv_pop == 4), -c(1:2)]
+adult10_counts2_pop5 <- adult10_counts2[which(adult10_counts2$bayenv_pop == 5), -c(1:2)]
+
+pop.allele.freqs <- rbind(
+colSums(adult10_counts2_pop1, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_pop1))),
+colSums(adult10_counts2_pop2, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_pop2))),
+colSums(adult10_counts2_pop3, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_pop3))),
+colSums(adult10_counts2_pop4, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_pop4))),
+colSums(adult10_counts2_pop5, na.rm = TRUE)/(2*colSums(!is.na(adult10_counts2_pop5)))
+)
+rownames(pop.allele.freqs) <- c('Pop1', 'Pop2', 'Pop3', 'Pop4', 'Pop5')
+
+# Check the frequency calculations above
+aggregate(adult10_counts2[,-c(1:2)], by= list(adult10_counts2$bayenv_pop), FUN = sum, na.rm = TRUE)[1,-1]/(2*colSums(!is.na(adult10_counts2_pop1)))
+aggregate(adult10_counts2[,-c(1:2)], by= list(adult10_counts2$bayenv_pop), FUN = sum, na.rm = TRUE)[2,-1]/(2*colSums(!is.na(adult10_counts2_pop2)))
+aggregate(adult10_counts2[,-c(1:2)], by= list(adult10_counts2$bayenv_pop), FUN = sum, na.rm = TRUE)[3,-1]/(2*colSums(!is.na(adult10_counts2_pop3)))
+aggregate(adult10_counts2[,-c(1:2)], by= list(adult10_counts2$bayenv_pop), FUN = sum, na.rm = TRUE)[4,-1]/(2*colSums(!is.na(adult10_counts2_pop4)))
+aggregate(adult10_counts2[,-c(1:2)], by= list(adult10_counts2$bayenv_pop), FUN = sum, na.rm = TRUE)[5,-1]/(2*colSums(!is.na(adult10_counts2_pop5)))
+
+write.table(adult10_counts2, '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.counts10.5pops.txt', col.names = TRUE) # write allele counts for each individual
+write.table(pop.allele.freqs, '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.freqs.5pops.txt', col.names = TRUE, row.names = TRUE) # write BayEnv population allele frequecies
 
 #### Allele frequency loci names between larvae & adults match ####
 # First, let's look at histograms of allele frequencies. I'm guessing they should look approximately similar
