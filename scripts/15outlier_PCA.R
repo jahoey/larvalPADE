@@ -596,3 +596,49 @@ b <- c(1,2,3,4)
 c <- c(1,1,2,2)
 plot(a~b, col= ifelse(c == 1, 'red', 'blue'))
 plot(south.log[290:293] ~ north.log[290:293], xlab = '-log10(north likelihood)', ylab = '-log10(south likelihood)', col=ifelse(geo.color[290:293] == 1, 'blue', 'tomato'))
+
+
+#### PCA of larvae & adults at 10 adult outlier loci, where population denotes unique location/time period combination ####
+library(ade4)
+library(adegenet)
+library(devtools)
+library("hierfstat")
+library(pegas)
+library(fields)
+
+outs <- read.structure("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_528_10outliers_10pops.str",
+                       n.ind = 528, n.loc = 10, col.lab = 1, col.pop = 2, row.marknames = 1,
+                       onerowperind = FALSE)
+
+sum(is.na(outs$tab)) #56
+X <- scaleGen(outs, NA.method = "mean")
+dim(X)
+class (X)
+
+# make PCA
+pca1 <- dudi.pca(X,cent=FALSE,scale=FALSE,scannf=FALSE,nf=3)
+barplot(pca1$eig[1:50],main="PCA eigenvalues", col=heat.colors(50))
+
+pca1
+
+# Plotting PC1 and PC2
+eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
+eig_percent [1:3]
+
+col <- rainbow(10)
+s.class(pca1$li, pop(outs), xax=1,yax=2, col = transp(col,0.7), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-10,6), ylim = c(-5,3), clabel = 0)
+axis(1, at=seq(-8,5, by=1), labels=seq(-8,5, by= 1), line = 1)
+axis(2, at=seq(-8,6, by = 1), labels=seq(-8,6, by= 1), line = 0.5, las = 2)
+mtext("PC1 (12.4%)", side = 1, line = 3.3)
+mtext("PC2 (11.4%)", side = 2, line = 3)
+title("PCA of larval & adult PADE using 10 outlier loci")
+
+legend(-8, 6.5,
+       # legend = levels(pop(outs)),
+       legend=c("early NJ", "adults", "middle NJ", "late NJ", "early NC", "middle NC", "late NC", "late Roosevelt", "late York River", "late North Inlet"),
+       pch=c(19, 19, 19, 19, 19, 19, 19, 19, 19, 19),
+       col=col,
+       bty = "n",
+       y.intersp = 1)
+
+
