@@ -641,4 +641,37 @@ legend(-8, 6.5,
        bty = "n",
        y.intersp = 1)
 
+# Make sure adults are differentiated
+adults_10outliers <- read.table('~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/pop.allele.counts10.5pops.txt', header = TRUE)
+adults_10outliers2 <- as.genind(adults_10outliers[,-c(1:2)])
+adults_10outliers2@pop <- as.factor(adults_10outliers$bayenv_pop)
+sum(is.na(adults_10outliers2$tab)) #10
+X <- scaleGen(adults_10outliers2, NA.method = "mean")
+dim(X)
+class (X)
 
+# make PCA
+pca1 <- dudi.pca(X,cent=FALSE,scale=FALSE,scannf=FALSE,nf=3)
+barplot(pca1$eig,main="PCA eigenvalues", col=heat.colors(50))
+
+pca1
+
+# Plotting PC1 and PC2
+eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
+eig_percent [1:3]
+
+cols <- c("#F21A00", "#E1AF00", "#EBCC2A", "#78B7C5", "#3B9AB2")
+
+s.class(pca1$li, pop(adults_10outliers2), xax=1,yax=2, col = transp(cols,0.7), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-10,6), ylim = c(-3,2), clabel = 0)
+axis(1, at=seq(-8,5, by=1), labels=seq(-8,5, by= 1), line = -1)
+axis(2, at=seq(-6,5, by = 1), labels=seq(-6,5, by= 1), line = 0.5, las = 2)
+mtext("PC1 (14.0%)", side = 1, line = 1.5)
+mtext("PC2 (11.7%)", side = 2, line = 2.5)
+title("PCA of 232 adult PADE using 10 outlier loci")
+
+legend(-7.5, -2,
+       legend = levels(pop(adults_10outliers2)),
+       pch=19,
+       col=cols,
+       bty = "n",
+       y.intersp = 1)
