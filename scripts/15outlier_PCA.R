@@ -237,7 +237,22 @@ table(pops2$pop)
 pops3 <- cbind(as.character(rep(pops2$V1, eac = 2)), rep(pops2$pop, eac = 2))
 write.table(pops3, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_528_10outliers_pops.txt", sep = '\t', col.names = FALSE, row.names = FALSE)
 
+#### Create a str file of larvae with otolith data, and where the pop column  indicates cluster ####
+# outs <- read.structure("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_151_10outliers_6clusters.str", n.ind = 528, n.loc = 10, col.lab = 1, col.pop = 2, row.marknames = 1,
+                       # onerowperind = FALSE) # read in structure file with adults & larvae (10 outliers)
 
+outs <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_528_10outliers_10pops2.str", skip = 1)
+
+oto.gen.merge4 <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/PADEconnectivity/oto.gen.merged151.6clusters.txt", header = TRUE) # read in file with larvae with only otolith data
+
+outs.151 <- outs[(outs$V1 %in% oto.gen.merge4$PinskyID),]
+
+outs.151.pops <- merge(outs.151, oto.gen.merge4, by.x = "V1", by.y = "PinskyID")
+outs.151.pops2 <- outs.151.pops[, c("V1", "cluster6", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12")]
+
+write.table(outs.151.pops2, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_151_10outliers_6clusters.str", col.names = TRUE, row.names = FALSE, sep = "\t")
+
+###############################
 # Remove adults
 adults <- rownames(full.freqs)[205:439] #528 fish total
 
