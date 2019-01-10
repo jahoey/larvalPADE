@@ -188,6 +188,7 @@ axis(1, at=seq(-40,20, by=10), labels=seq(-40,20, by= 10), line = 1.5)
 axis(2, at=seq(-20,20, by = 10), labels=seq(-20,20, by= 10), line = 3, las = 2)
 mtext("PC1 (0.67%)", side = 1, line = 4)
 mtext("PC2 (0.65%)", side = 2, line = 5.5)
+# text(-34, 17, "B")
 
 legend(-36, -7,
        legend=c("1989-1993 (n = 60)", "1998-2002 (n = 87)", "2008-2012 (n = 146)"),
@@ -197,6 +198,10 @@ legend(-36, -7,
        bty = "n",
        y.intersp = 1)
 
+legend(-40.7,21,
+       legend = expression("B"),
+       bty = "n",
+       cex = 1.3)
 dev.off()
 
 eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
@@ -246,15 +251,44 @@ multiallelic <- names(which(full@loc.n.all > 2))
 larvs293_biallelic <- larvs293_multiallelic[,!(colnames(larvs293_multiallelic) %in% multiallelic)]
 
 # Split data into odd and even row dataframes
+# Multiallelic calculation followed by biallelic calculation
 even_indexes<-seq(2,586,2)
 odd_indexes<-seq(1,585,2)
 
+# Multiallelic
+odds <- data.frame(larvs293_multiallelic[odd_indexes,]) # 293 x 1906
+odds2 <- odds[,-c(1:2)] # 293 x 1904
+evens <- data.frame(larvs293_multiallelic[even_indexes,]) # 293 x 1906
+evens2 <- evens[,-c(1:2)] # 293 x 1904
+
+# Biallelic
 odds <- data.frame(larvs293_biallelic[odd_indexes,]) # 293 x 1884
 odds2 <- odds[,-c(1:2)] # 293 x 1882
 evens <- data.frame(larvs293_biallelic[even_indexes,]) # 293 x 1884
 evens2 <- evens[,-c(1:2)] # 293 x 1882
 
 # Now paste each value in one dataframe with its corresponding in the other
+# Multiallelic
+s <- 1:length(colnames(evens2))
+combo <- data.frame(matrix(nrow = 293, ncol = 1904))
+for (i in s){
+  combo[,i] <-paste(odds2[,i], evens2[,i], sep = '')
+}
+
+dim(combo) # 293 x 1904
+
+combo[] <- lapply(combo, function(x) as.numeric(as.character(x)))# Convert to numeric, gives warning because replaces character 'NANA' with NA
+
+pop.names <- as.numeric(as.character(evens$Pop))
+
+# Combine the population numbers with the allele data
+combo2 <- cbind(pop.names, combo)
+dim(combo2) # 293 x 1905
+
+pairwise.WCfst(combo2,diploid=TRUE) 
+genet.dist(combo2, method = 'WC84')
+
+# Biallelic
 s <- 1:length(colnames(evens2))
 combo <- data.frame(matrix(nrow = 293, ncol = 1882))
 for (i in s){
@@ -273,6 +307,37 @@ dim(combo2) # 293 x 1883
 
 pairwise.WCfst(combo2,diploid=TRUE) 
 genet.dist(combo2, method = 'WC84')
+
+#### FST calculation with each population representing a site/time period combination ####
+larvs <- read.table("structure_input_Jan9_2019_293_1904_9pops.txt", sep="\t", header = TRUE)
+
+even_indexes<-seq(2,586,2)
+odd_indexes<-seq(1,585,2)
+
+odds <- data.frame(larvs[odd_indexes,]) # 293 x 1906
+odds2 <- odds[,-c(1:2)] # 293 x 1904
+evens <- data.frame(larvs[even_indexes,]) # 293 x 1906
+evens2 <- evens[,-c(1:2)] # 293 x 1904
+
+s <- 1:length(colnames(evens2))
+combo <- data.frame(matrix(nrow = 293, ncol = 1904))
+for (i in s){
+  combo[,i] <-paste(odds2[,i], evens2[,i], sep = '')
+}
+
+dim(combo) # 293 x 1904
+
+combo[] <- lapply(combo, function(x) as.numeric(as.character(x)))# Convert to numeric, gives warning because replaces character 'NANA' with NA
+
+pop.names <- as.numeric(as.character(evens$Pop))
+
+# Combine the population numbers with the allele data
+combo2 <- cbind(pop.names, combo)
+dim(combo2) # 293 x 1905
+
+pairwise.WCfst(combo2,diploid=TRUE) 
+genet.dist(combo2, method = 'WC84')
+
 
 
 # #####################################################
@@ -645,7 +710,7 @@ for (i in north_temporal_outliers){
 #### How can I summarize allele frequency plots over time for multiple loci into a single plot? ####
 # Difference between northern and southern allele frequency in latest time period/difference between northern and southern allele frequency in earliest time period on one axis
 # Northern allele frequency slope over time/southern allele frequency slope over time on other axis
-north.late2south.late 
+north.late2south.late # these are below
 north.early2south.early
 
 # I need a for loop to fit a line to all northern AND all southern allele frequencies
@@ -660,9 +725,15 @@ south.slopes <- south.coeff[2,]
 
 axis1 <- abs(north.slopes)-abs(south.slopes)
 # axis1 <- axis1[seq(1,length(axis1),2)] # plots just one allele per locus
+odd_indexes<-seq(1,3763,2)
+axis1.odds <- axis1[odd_indexes] # 1882
+save(axis1.odds, file = "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis1.odds.RData")
 
 axis2 <- abs(north.early2south.early)-abs(north.late2south.late)
 # axis2 <- axis2[seq(1,length(axis2),2)] # plots just one allele per locus
+odd_indexes<-seq(1,3763,2)
+axis2.odds <- axis2[odd_indexes] # 1882
+save(axis2.odds, file = "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/axis2.odds.RData")
 
 plot(axis1 ~ axis2, ylab = '|Slope in north| - |Slope in south|', xlab = '|Difference between early NvS| - |Difference between late NvS|')
 abline(h = 0, v = 0, col = 'blue')
@@ -790,6 +861,46 @@ north.early2south.early <- allelefreq.larvs.mean.north.t [,1] - allelefreq.larvs
 hist(north.early2south.early, breaks = 20)
 hist(north.half2south.half, breaks = 20)
 hist(north.late2south.late, breaks = 20) # the tails of the north/south differences are clearly smaller at the end of the time period
+
+# Which ones are the spatial outliers in each of the time periods?
+# Early spatial outliers
+early_spatial_outliers <- which(as.vector(north.early2south.early) > (sd(north.early2south.early, na.rm = TRUE))*3)
+
+par(mfrow = c(5,4))
+for (i in early_spatial_outliers){
+  plot(allelefreq.larvs.mean.north.t[10,], ylim=c(0,1), col = NULL, xlab = 'Time Period', ylab = 'Allele Frequency', xaxt = 'n', main = paste(rownames(allelefreq.larvs.mean.north.t)[i]))
+  axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
+  lines(allelefreq.larvs.mean.north.t[i,])
+  lines(allelefreq.larvs.mean.south.t[i,], col = 'tomato')
+  arrows(c(1,2,3), allelefreq.larvs.mean.north.t[i,] - allelefreq.larvs.se.north.t[i,], c(1,2,3), allelefreq.larvs.mean.north.t[i,] + allelefreq.larvs.se.north.t[i,], length = 0.05, angle = 90, code = 3)
+  arrows(c(1,2,3), allelefreq.larvs.mean.south.t[i,] - allelefreq.larvs.se.south.t[i,], c(1,2,3), allelefreq.larvs.mean.south.t[i,] + allelefreq.larvs.se.south.t[i,], length = 0.05, angle = 90, code = 3, col = 'tomato')
+}
+
+# Half spatial outliers
+half_spatial_outliers <- which(as.vector(north.half2south.half) > (sd(north.half2south.half, na.rm = TRUE))*3)
+
+par(mfrow = c(3,5))
+for (i in half_spatial_outliers){
+  plot(allelefreq.larvs.mean.north.t[10,], ylim=c(0,1), col = NULL, xlab = 'Time Period', ylab = 'Allele Frequency', xaxt = 'n', main = paste(rownames(allelefreq.larvs.mean.north.t)[i]))
+  axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
+  lines(allelefreq.larvs.mean.north.t[i,])
+  lines(allelefreq.larvs.mean.south.t[i,], col = 'tomato')
+  arrows(c(1,2,3), allelefreq.larvs.mean.north.t[i,] - allelefreq.larvs.se.north.t[i,], c(1,2,3), allelefreq.larvs.mean.north.t[i,] + allelefreq.larvs.se.north.t[i,], length = 0.05, angle = 90, code = 3)
+  arrows(c(1,2,3), allelefreq.larvs.mean.south.t[i,] - allelefreq.larvs.se.south.t[i,], c(1,2,3), allelefreq.larvs.mean.south.t[i,] + allelefreq.larvs.se.south.t[i,], length = 0.05, angle = 90, code = 3, col = 'tomato')
+}
+
+# Late spatial outliers
+late_spatial_outliers <- which(as.vector(north.late2south.late) > (sd(north.late2south.late, na.rm = TRUE))*3)
+
+par(mfrow = c(3,5))
+for (i in late_spatial_outliers){
+  plot(allelefreq.larvs.mean.north.t[10,], ylim=c(0,1), col = NULL, xlab = 'Time Period', ylab = 'Allele Frequency', xaxt = 'n', main = paste(rownames(allelefreq.larvs.mean.north.t)[i]))
+  axis(1, at=1:3, labels = c('1989-1993', '1998-2002', '2008-2012'))
+  lines(allelefreq.larvs.mean.north.t[i,])
+  lines(allelefreq.larvs.mean.south.t[i,], col = 'tomato')
+  arrows(c(1,2,3), allelefreq.larvs.mean.north.t[i,] - allelefreq.larvs.se.north.t[i,], c(1,2,3), allelefreq.larvs.mean.north.t[i,] + allelefreq.larvs.se.north.t[i,], length = 0.05, angle = 90, code = 3)
+  arrows(c(1,2,3), allelefreq.larvs.mean.south.t[i,] - allelefreq.larvs.se.south.t[i,], c(1,2,3), allelefreq.larvs.mean.south.t[i,] + allelefreq.larvs.se.south.t[i,], length = 0.05, angle = 90, code = 3, col = 'tomato')
+}
 
 # Grouping data so that I can plot multiple boxplots on a single plot
 regionaldiffs <- data.frame(cbind(north.early2south.early, north.half2south.half, north.late2south.late))
@@ -1002,3 +1113,36 @@ hist(permute[,1])
 mean(permute[,1])
 
 mean(outlier.df[which(outlier.df$time_period =='early' & outlier.df$geo == 'south'), 'SNP_40.01'])
+
+############################################################
+#### Create a str file for 293 larvae using 1904 loci, and where the pop column tells you what ingress site/time period the individual was captured in ####
+setwd("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files")
+
+library(ade4)
+library(adegenet)
+library("hierfstat")
+library(pegas)
+
+# Read in a text file containing 293 larvae and 1904 loci (some of which are multiallelic)
+larvs <- read.table("structure_input_Mar14_2017_293_1904_9pops.txt", sep="\t", header = TRUE)
+
+# Read in file with population assignment that denotes ingress site/time period combination
+pops <- read.structure("structure_input_528_10outliers_10pops2.str", n.ind = 528, n.loc = 10, col.lab = 1, col.pop = 2, row.marknames = 1,
+  onerowperind = FALSE)
+
+# Isolate unique larval IDs
+larvs.uniq <- as.character(unique(larvs$ID))
+
+# Isolate pop identifier & cbind with ID
+pop <- cbind(rownames(pops@tab), as.vector(pops@pop)) # this also has adults
+
+# Get rid of adults
+pop.larvs <- pop[pop[,1] %in% larvs.uniq,] #293 x2
+
+# Order names in the order they are in the file that will be used for STRUCTURE
+data <- pop.larvs[match(larvs.uniq, pop.larvs[,1]),]
+data[,1] == larvs.uniq # names and pop identifier are in order
+
+# Repeat ID/pop identifier & write file so that it can be pasted into structure_input_Mar14_2017_293_1904_9pops.txt
+data2 <- data[rep(seq_len(nrow(data)), each=2),]
+write.table(data2, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs_forstructure.txt", sep = "\t", row.names = FALSE, col.names = FALSE)
