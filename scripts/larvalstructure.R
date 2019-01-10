@@ -55,13 +55,20 @@ larvs <- read.csv("Larvae Sampling Database.csv", header=TRUE)
 #### Getting rid of the adult allele frequencies and fixing the larval names####
 # Need to get rid of the adults so I can only look at the larvae
 dim(full_bi@tab)
-full.freqs <- as.data.frame(full_bi@tab)
-dim(full.freqs) #528 x 3764
+full.freqs <- as.data.frame(full_bi@tab) #biallelic
+full.freqs <- as.data.frame(full@tab) #multiallelic
+dim(full.freqs) #528 x 3764; 528 x 3831
 
 adults <- rownames(full.freqs)[205:439] #528 fish total
 
+# Biallelic
 larvs.freqs <- full.freqs[!(rownames(full.freqs) %in% adults),]
 dim(larvs.freqs) #293 x 3764
+larvs.freqs2 <- as.genind(larvs.freqs)
+
+# Multiallelic
+larvs.freqs <- full.freqs[!(rownames(full.freqs) %in% adults),]
+dim(larvs.freqs) #293 x 3831
 larvs.freqs2 <- as.genind(larvs.freqs)
 
 # Removing the ligation ID in the names and sticking the names back
@@ -69,8 +76,10 @@ larv.names.split <- do.call(rbind, strsplit(rownames(larvs.freqs2@tab), 'L')) # 
 rownames(larvs.freqs2@tab) <- larv.names.split[,1]
 
 # Removing the adult populations and putting pop back in
-nope <- pop(full_bi)[pop(full)==4]
+nope <- pop(full_bi)[pop(full)==4] #biallelic
 pop <- pop(full_bi)[!as.vector(pop(full_bi)) %in% nope]
+nope <- pop(full)[pop(full)==4] #multiallelic
+pop <- pop(full)[!as.vector(pop(full)) %in% nope]
 population <- as.vector(pop)
 larvs.freqs2@pop <- as.factor(population)
 
@@ -128,9 +137,9 @@ which(result_indiv > 500) #3 larvae missing 500 alleles or more
 larvs.freqs2@tab[c(9,94,244),1:2] # which fish are missing these alleles?
 
 #### PCA on larvae only####
-sum(is.na(larvs.freqs2$tab)) #9424; try 3: 9424/(293*3764)
+sum(is.na(larvs.freqs2$tab)) #9424; try 3: 9424/(293*3764); multiallelic = 9554
 X <- scaleGen(larvs.freqs2, NA.method = "mean") # 4 alleles that aren't variable are being cut out; variance = 0 makes it hard to scale
-dim(X) #293 x 3760
+dim(X) #293 x 3760 = biallelic; 293 x 3827 = multiallelic
 class (X)
 
 # make PCA
@@ -155,7 +164,7 @@ eig_percent <- round((pca1$eig/(sum(pca1$eig)))*100,2)
 eig_percent [1:3]
 
 ### To make a nice plot of the PCA broken down by region ###
-png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_regionalpops_b&w.png", width=8, height=7, res=300, units="in")
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_regionalpops_1904loci.png", width=8, height=7, res=300, units="in")
 
 par(
   mar=c(9, 8, 3, 8), # panel magin size in "line number" units
@@ -167,17 +176,17 @@ par(
   bty = 'n'
 )
 
-# col <- c("#0072B2", "#D55E00")
-col <- c("#969696", "#000000")
-s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.7), pch = 1, axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
+col <- c("#0072B2", "#D55E00")
+# col <- c("#969696", "#000000")
+s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.7), pch = 19, axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
 axis(1, at=seq(-40,20, by=10), labels=seq(-40,20, by= 10), line = 1.5)
 axis(2, at=seq(-20,20, by = 10), labels=seq(-20,20, by= 10), line = 3, las = 2)
-mtext("PC1 (0.67%)", side = 1, line = 4)
+mtext("PC1 (0.66%)", side = 1, line = 4)
 mtext("PC2 (0.65%)", side = 2, line = 5.5)
 
 legend(-36, -8,
        legend=c("North (n = 146)", "South (n = 147)"),
-       pch=c(1, 1),
+       pch=c(19, 19),
        col=col,
        bty = "n",
        y.intersp = 1)
@@ -187,6 +196,43 @@ legend(-40.7,21,
        bty = "n",
        cex = 1.3)
 
+dev.off()
+
+### To make a nice plot of the PCA broken down by time period ###
+larvs.freqs2@pop <- as.factor(population) # Make sure the pop content refers to time periods and not regions
+png(file="~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/results/larval_pca_temppops_1904loci.png", width=8, height=7, res=300, units="in")
+
+par(
+  mar=c(9, 8, 3, 8), # panel magin size in "line number" units
+  mgp=c(3, 1, 0), # default is c(3,1,0); line number for axis label, tick label, axis
+  tcl=-0.5, # size of tick marks as distance INTO figure (negative means pointing outward)
+  cex=1, # character expansion factor; keep as 1; if you have a many-panel figure, they start changing the default!
+  ps=14, # point size, which is the font size
+  bg=NA,
+  bty = 'n'
+)
+
+col <- azur(3)
+# col <- greypal(4)
+# col <- c("#C6C6C6", "#686868", "#000000")
+s.class(pca1$li, pop(larvs.freqs2), xax=1,yax=2, col = transp(col,0.7), axesell=TRUE, cellipse=1.5, cstar=1,cpoint=1.75, grid=FALSE, addaxes = FALSE, xlim = c(-50,30), ylim = c(-30,28), clabel = 0)
+axis(1, at=seq(-40,20, by=10), labels=seq(-40,20, by= 10), line = 1.5)
+axis(2, at=seq(-20,20, by = 10), labels=seq(-20,20, by= 10), line = 3, las = 2)
+mtext("PC1 (0.66%)", side = 1, line = 4)
+mtext("PC2 (0.65%)", side = 2, line = 5.5)
+
+legend(-36, -7,
+       legend=c("1989-1993 (n = 60)", "1998-2002 (n = 87)", "2008-2012 (n = 146)"),
+       pch=c(19, 19, 19),
+       col=col,
+       # col = c("#C6C6C6", "#686868", "#000000"),
+       bty = "n",
+       y.intersp = 1)
+
+legend(-40.7,21,
+       legend = expression("B"),
+       bty = "n",
+       cex = 1.3)
 dev.off()
 
 # Need to match PC coordinates with the location and period so that I can plot in different colors/draw ellipses
