@@ -462,7 +462,7 @@ strata(larvs) <- pop_strata[,-1]
 #### AMOVA ####
 larvs_dist <- dist(larvs)
 larvs_strata <- strata(larvs)
-larvs_amova <- pegas::amova(larvs_dist ~ geo, data = larvs_strata, nperm = 1000) # no difference between region or time period
+larvs_amova <- pegas::amova(larvs_dist ~ geo, data = larvs_strata, nperm = 1000) # no difference between regions
 larvs_amova
 
 # AMOVA another way using the poppr package
@@ -1146,3 +1146,26 @@ data[,1] == larvs.uniq # names and pop identifier are in order
 # Repeat ID/pop identifier & write file so that it can be pasted into structure_input_Mar14_2017_293_1904_9pops.txt
 data2 <- data[rep(seq_len(nrow(data)), each=2),]
 write.table(data2, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs_forstructure.txt", sep = "\t", row.names = FALSE, col.names = FALSE)
+
+####################################################################################################################
+#### Removing loci not in HWE for another STRUCTURE run ####
+# Read in STRUCTURE formatted file of 293 larvae and 1904 loci
+larvs <- read.structure("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_Jan9_2019_293_1904_9pops.str",
+                       n.ind = 293, n.loc = 1904, col.lab = 1, col.pop = 2, row.marknames = 1,
+                       onerowperind = FALSE)
+
+larvs.hwt <- hw.test(larvs, B=10000)
+larvs.hwt
+hist(larvs.hwt[,4], nclass =30)
+pval <- larvs.hwt[larvs.hwt[,"Pr.exact"] < 0.0100,] # p<0.01, exact test; like in Wolf population structure & canidate genes under selection paper
+length(pval[,"Pr.exact"]) 
+
+# Now read in txt file version of STRUCTURE file and remove SNPs not in HWE (pval)
+larvs2 <- read.table('~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_Jan9_2019_293_1904_9pops.txt', header = TRUE)
+
+larvs2.hwe <- larvs2[,!colnames(larvs2) %in% rownames(pval)]
+
+write.table(larvs2.hwe, '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_Jan9_2019_293_1646_9pops_hwe.txt', row.names = FALSE, col.names = TRUE, sep = '\t')
+# Then change extension name from .txt to .str
+
+
