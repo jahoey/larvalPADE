@@ -338,6 +338,7 @@ dim(combo2) # 293 x 1905
 pairwise.WCfst(combo2,diploid=TRUE) 
 genet.dist(combo2, method = 'WC84')
 
+options("scipen"=100, "digits"=4) # forces output to not be in scientific notation
 
 
 # #####################################################
@@ -458,6 +459,55 @@ geo <- gsub('Roosevelt Inlet, DE', 'north', geo)
 
 pop_strata <- data.frame(cbind(rownames(allelefreqs_larvs), time_period, geo))
 strata(larvs) <- pop_strata[,-1]
+
+# Hierarchical AMOVA with location and time period. Time period needs to be coded differently for 'north' & 'early' vs. 'south' & 'early', for example
+# This just needs to be done once to get the codes for ingress site/time period combos. Can then proceed with reading in pop.id2.
+pop.id <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs_forstructure.txt")
+
+# Read in file with population assignment that denotes ingress site/time period combination
+pops <- read.structure("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_528_10outliers_10pops2.str", n.ind = 528, n.loc = 10, col.lab = 1, col.pop = 2, row.marknames = 1,
+                       onerowperind = FALSE)
+
+# Isolate unique larval IDs
+larvs.uniq <- as.character(unique(pop.id$V1))
+
+# Isolate pop identifier & cbind with ID
+pop <- cbind(rownames(pops@tab), as.vector(pops@pop)) # this also has adults
+
+# Get rid of adults
+pop.larvs <- pop[pop[,1] %in% larvs.uniq,] #293 x2
+# write.table(pop.larvs, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs.txt", sep = "\t", row.names = FALSE, col.names = FALSE) # Get rid of "'s and quickly fix location of _ in names
+
+# Read pop IDs back in and merge with location and time period data, then run AMOVA
+pop.id2 <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs.txt")
+
+pop.id3 <- merge(ordered_larvae_database_sub, pop.id2, by.x = 'ID..', by.y = 'V1')
+pop.id3 <- droplevels(pop.id3) # gets rid of unused factor levels
+pop.id3$V2 <- as.factor(pop.id3$V2)
+pop.id3$V3 <- as.factor(pop.id3$V3)
+
+pop.id3$Place <- gsub('Beaufort, NC', 'south', pop.id3$Place) # instead of each ingress site separately, just do north and south
+pop.id3$Place <- gsub('North Inlet, SC', 'south', pop.id3$Place)
+pop.id3$Place <- gsub('Little Egg Inlet, NJ', 'north', pop.id3$Place)
+pop.id3$Place <- gsub('York River, VA', 'north', pop.id3$Place)
+pop.id3$Place <- gsub('Roosevelt Inlet, DE', 'north', pop.id3$Place)
+pop.id3$Place <- as.factor(pop.id3$Place)
+
+rownames(larvs@tab) == pop.id3$ID..
+
+larvs_amova <- pegas::amova(larvs_dist ~ Place/V3, data = pop.id3, nperm = 1000) # no difference between time periods, but no p-value for place? Lowering nperm seems to help.
+larvs_amova
+
+# Another way to do hierarchical AMOVA using poppr package
+library("poppr")
+pop_strata <- data.frame(cbind(pop.id3$Place, pop.id3$V3))
+strata(larvs) <- pop_strata
+
+amova.poppr <- poppr.amova(larvs, ~ X1/X2, within = TRUE)
+amova.poppr.test <- randtest(amova.poppr, nrepet = 1000) #tests for significance
+plot(amova.poppr.test) # variation between populations is significant, but this variation is small compared to variation within pops
+
+
 
 #### AMOVA ####
 larvs_dist <- dist(larvs)
