@@ -478,13 +478,15 @@ pop <- cbind(rownames(pops@tab), as.vector(pops@pop)) # this also has adults
 pop.larvs <- pop[pop[,1] %in% larvs.uniq,] #293 x2
 # write.table(pop.larvs, "~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs.txt", sep = "\t", row.names = FALSE, col.names = FALSE) # Get rid of "'s and quickly fix location of _ in names
 
-# Read pop IDs back in and merge with location and time period data, then run AMOVA
-pop.id2 <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs.txt")
+# Read pop IDs/hierarchical levels back in and merge with location and time period data, then run AMOVA
+pop.id2 <- read.table("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/293larvs_popIDs.txt", header = TRUE)
 
-pop.id3 <- merge(ordered_larvae_database_sub, pop.id2, by.x = 'ID..', by.y = 'V1')
+pop.id3 <- merge(ordered_larvae_database_sub, pop.id2, by.x = 'ID..', by.y = 'Fish_ID')
 pop.id3 <- droplevels(pop.id3) # gets rid of unused factor levels
-pop.id3$V2 <- as.factor(pop.id3$V2)
-pop.id3$V3 <- as.factor(pop.id3$V3)
+pop.id3$Locations_all <- as.factor(pop.id3$Locations_all)
+pop.id3$Time_within_NSLocations <- as.factor(pop.id3$Time_within_NSLocations)
+pop.id3$Time <- as.factor(pop.id3$Time)
+pop.id3$NSLocations_within_Time <- as.factor(pop.id3$NSLocations_within_Time)
 
 pop.id3$Place <- gsub('Beaufort, NC', 'south', pop.id3$Place) # instead of each ingress site separately, just do north and south
 pop.id3$Place <- gsub('North Inlet, SC', 'south', pop.id3$Place)
@@ -495,19 +497,24 @@ pop.id3$Place <- as.factor(pop.id3$Place)
 
 rownames(larvs@tab) == pop.id3$ID..
 
-larvs_amova <- pegas::amova(larvs_dist ~ Place/V3, data = pop.id3, nperm = 1000) # no difference between time periods, but no p-value for place? Lowering nperm seems to help.
+larvs_amova <- pegas::amova(larvs_dist ~ Place/Time_within_NSLocations, data = pop.id3, nperm = 1000) # no difference between time periods, but no p-value for place? Lowering nperm seems to help.
+# larvs_amova <- pegas::amova(larvs_dist ~ Time/NSLocations_within_Time, data = pop.id3, nperm = 1000)
 larvs_amova
 
 # Another way to do hierarchical AMOVA using poppr package
 library("poppr")
-pop_strata <- data.frame(cbind(pop.id3$Place, pop.id3$V3))
+pop_strata <- data.frame(cbind(pop.id3$Place, pop.id3$Time_within_NSLocations, pop.id3$Time, pop.id3$NSLocations_within_Time))
 strata(larvs) <- pop_strata
 
-amova.poppr <- poppr.amova(larvs, ~ X1/X2, within = TRUE)
+# AMOVA between locations and time periods within locations
+amova.poppr <- poppr.amova(larvs, ~ X1/X2, within = FALSE) # Default is ade4
 amova.poppr.test <- randtest(amova.poppr, nrepet = 1000) #tests for significance
 plot(amova.poppr.test) # variation between populations is significant, but this variation is small compared to variation within pops
 
-
+# AMOVA between time periods and locations within locations
+amova.poppr2 <- poppr.amova(larvs, ~ X3/X4, within = FALSE)
+amova.poppr.test2 <- randtest(amova.poppr2, nrepet = 1000) #tests for significance when ade4 amova is used
+plot(amova.poppr.test2)
 
 #### AMOVA ####
 larvs_dist <- dist(larvs)
