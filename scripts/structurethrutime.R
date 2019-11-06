@@ -1225,4 +1225,70 @@ larvs2.hwe <- larvs2[,!colnames(larvs2) %in% rownames(pval)]
 write.table(larvs2.hwe, '~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_Jan9_2019_293_1646_9pops_hwe.txt', row.names = FALSE, col.names = TRUE, sep = '\t')
 # Then change extension name from .txt to .str
 
+#### Plot adult outlier loci in larvae ####
+# Prepare data. Read in STRUCTURE formatted file of 293 larvae and 1904 loci
+larvs <- read.structure("~/Documents/Graduate School/Rutgers/Summer Flounder/Analysis/full_PADE_analysis/data_files/structure_input_Jan9_2019_293_1904_9pops.str",
+                        n.ind = 293, n.loc = 1904, col.lab = 1, col.pop = 2, row.marknames = 1,
+                        onerowperind = FALSE)
+pop <- as.character(larvs@pop)
+
+# Make vector of adult canidate SNPs to subset larval dataset
+cans <- c('SNP_35\\.', 'SNP_125\\.', 'SNP_214\\.', 'SNP_291\\.', 'SNP_396\\.', 'SNP_442\\.', 'SNP_499\\.', 'SNP_524\\.', 'SNP_542\\.', 'SNP_609\\.', 'SNP_615\\.', 'SNP_743\\.', 'SNP_825\\.', 'SNP_919\\.', 'SNP_990\\.')
+
+# Search for SNP numbers
+larvs.sub <- larvs@tab[,unique (grep(paste(cans,collapse="|"), colnames(larvs@tab), value=TRUE))]
+
+# cbind the population identifiers to the genotype data
+larvs.sub2 <- cbind.data.frame(pop, larvs.sub)
+table(larvs.sub2[, 'pop'])
+
+# Divide out fish into desired groupings
+# Yearly
+one <- larvs.sub2[which(larvs.sub2[, 'pop'] == '1'),]
+two <- larvs.sub2[which(larvs.sub2[, 'pop'] == '2'),]
+three <- larvs.sub2[which(larvs.sub2[, 'pop'] == '3'),]
+four <- larvs.sub2[which(larvs.sub2[, 'pop'] == '4'),]
+five <- larvs.sub2[which(larvs.sub2[, 'pop'] == '5'),]
+six <- larvs.sub2[which(larvs.sub2[, 'pop'] == '6'),]
+seven <- larvs.sub2[which(larvs.sub2[, 'pop'] == '7'),]
+eight <- larvs.sub2[which(larvs.sub2[, 'pop'] == '8'),]
+nine <- larvs.sub2[which(larvs.sub2[, 'pop'] == '9'),]
+
+# period
+early <- rbind.data.frame(one, four)
+mid <- rbind.data.frame(two, five)
+late <- rbind.data.frame(three, six, seven, eight, nine)
+
+# Calculate allele frequencies
+# yearly
+one2 <- colSums(one[,-1],na.rm=TRUE)/(2*colSums(!is.na(one[,-1]))) # only calculates frequencies of columns containing alleles
+two2 <- colSums(two[,-1],na.rm=TRUE)/(2*colSums(!is.na(two[,-1])))
+three2 <- colSums(three[,-1],na.rm=TRUE)/(2*colSums(!is.na(three[,-1])))
+four2 <- colSums(four[,-1],na.rm=TRUE)/(2*colSums(!is.na(four[,-1])))
+five2 <- colSums(five[,-1],na.rm=TRUE)/(2*colSums(!is.na(five[,-1])))
+six2 <- colSums(six[,-1],na.rm=TRUE)/(2*colSums(!is.na(six[,-1])))
+seven2 <- colSums(seven[,-1],na.rm=TRUE)/(2*colSums(!is.na(seven[,-1])))
+eight2 <- colSums(eight[,-1],na.rm=TRUE)/(2*colSums(!is.na(eight[,-1])))
+nine2 <- colSums(nine[,-1],na.rm=TRUE)/(2*colSums(!is.na(nine[,-1])))
+
+# period
+early2 <- colSums(early[,-1],na.rm=TRUE)/(2*colSums(!is.na(early[,-1])))
+mid2 <- colSums(mid[,-1],na.rm=TRUE)/(2*colSums(!is.na(mid[,-1])))
+late2 <- colSums(late[,-1],na.rm=TRUE)/(2*colSums(!is.na(late[,-1])))
+
+# Plot
+year <- rbind(one2, two2, three2, four2, five2, six2, seven2, eight2, nine2)
+
+for (i in 1:ncol(year)) {
+  plot(year[,i])
+  lines(year[,i], col = 'tomato')
+}
+
+period <- rbind(early2, mid2, late2)
+
+for (i in 1:ncol(period)) {
+  plot(period[,i])
+  lines(period[,i], col = 'tomato')
+}
+
 
