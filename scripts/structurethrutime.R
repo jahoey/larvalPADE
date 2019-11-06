@@ -1232,8 +1232,9 @@ larvs <- read.structure("~/Documents/Graduate School/Rutgers/Summer Flounder/Ana
                         onerowperind = FALSE)
 pop <- as.character(larvs@pop)
 
-# Make vector of adult canidate SNPs to subset larval dataset
-cans <- c('SNP_35\\.', 'SNP_125\\.', 'SNP_214\\.', 'SNP_291\\.', 'SNP_396\\.', 'SNP_442\\.', 'SNP_499\\.', 'SNP_524\\.', 'SNP_542\\.', 'SNP_609\\.', 'SNP_615\\.', 'SNP_743\\.', 'SNP_825\\.', 'SNP_919\\.', 'SNP_990\\.')
+# Make vector of adult canidate SNPs to subset larval dataset. Remember that SNP numbers are different in adults and larvae
+# cans <- c('SNP_35\\.', 'SNP_125\\.', 'SNP_214\\.', 'SNP_291\\.', 'SNP_396\\.', 'SNP_442\\.', 'SNP_499\\.', 'SNP_524\\.', 'SNP_542\\.', 'SNP_609\\.', 'SNP_615\\.', 'SNP_743\\.', 'SNP_825\\.', 'SNP_919\\.', 'SNP_990\\.') # these are the SNP #'s in the adults
+cans <- c('SNP_170\\.', 'SNP_458\\.', 'SNP_685\\.', 'SNP_833\\.', 'SNP_1062\\.', 'SNP_1129\\.', 'SNP_1171\\.', 'SNP_1194\\.', 'SNP_1282\\.', 'SNP_1443\\.') # these are the corresponding SNP #'s in the larvae
 
 # Search for SNP numbers
 larvs.sub <- larvs@tab[,unique (grep(paste(cans,collapse="|"), colnames(larvs@tab), value=TRUE))]
@@ -1259,6 +1260,9 @@ early <- rbind.data.frame(one, four)
 mid <- rbind.data.frame(two, five)
 late <- rbind.data.frame(three, six, seven, eight, nine)
 
+north.late <- rbind(three, seven, eight)
+south.late <- rbind(six, nine)
+
 # Calculate allele frequencies
 # yearly
 one2 <- colSums(one[,-1],na.rm=TRUE)/(2*colSums(!is.na(one[,-1]))) # only calculates frequencies of columns containing alleles
@@ -1276,6 +1280,13 @@ early2 <- colSums(early[,-1],na.rm=TRUE)/(2*colSums(!is.na(early[,-1])))
 mid2 <- colSums(mid[,-1],na.rm=TRUE)/(2*colSums(!is.na(mid[,-1])))
 late2 <- colSums(late[,-1],na.rm=TRUE)/(2*colSums(!is.na(late[,-1])))
 
+north.early <- colSums(one[,-1],na.rm=TRUE)/(2*colSums(!is.na(one[,-1])))
+south.early <- colSums(four[,-1],na.rm=TRUE)/(2*colSums(!is.na(four[,-1])))
+north.mid <- colSums(two[,-1],na.rm=TRUE)/(2*colSums(!is.na(two[,-1])))
+south.mid <- colSums(five[,-1],na.rm=TRUE)/(2*colSums(!is.na(five[,-1])))
+north.late2 <- colSums(north.late[,-1],na.rm=TRUE)/(2*colSums(!is.na(north.late[,-1])))
+south.late2 <- colSums(south.late[,-1],na.rm=TRUE)/(2*colSums(!is.na(south.late[,-1])))
+
 # Plot
 year <- rbind(one2, two2, three2, four2, five2, six2, seven2, eight2, nine2)
 
@@ -1291,4 +1302,12 @@ for (i in 1:ncol(period)) {
   lines(period[,i], col = 'tomato')
 }
 
+north <- rbind(north.early, north.mid, north.late2)
+south <- rbind(south.early, south.mid, south.late2)
+
+for (i in 1:ncol(north)) {
+  plot(north[,i], ylim = c(0,1))
+  lines(north[,i], col = 'tomato')
+  lines(south[,i], col = 'black')
+}
 
